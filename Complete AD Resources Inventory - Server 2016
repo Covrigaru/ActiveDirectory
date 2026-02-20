@@ -244,9 +244,11 @@ try {
         Write-Host "  ✓ Exported $($DNSZones.Count) DNS zones" -ForegroundColor Green
     } else {
         Write-Host "  ⚠ No DNS zones found or DNS role not installed" -ForegroundColor Yellow
+        $DNSZones = @()
     }
 } catch {
     Write-Host "  ⚠ DNS module not available" -ForegroundColor Yellow
+    $DNSZones = @()
 }
 
 # ==========================================
@@ -254,6 +256,17 @@ try {
 # ==========================================
 Write-Host ""
 Write-Host "Generating Summary Report..." -ForegroundColor Cyan
+
+$EnabledUsers = ($Users | Where-Object {$_.Enabled -eq $true}).Count
+$DisabledUsers = ($Users | Where-Object {$_.Enabled -eq $false}).Count
+$SecurityGroups = ($Groups | Where-Object {$_.GroupCategory -eq 'Security'}).Count
+$DistGroups = ($Groups | Where-Object {$_.GroupCategory -eq 'Distribution'}).Count
+$EnabledComputers = ($Computers | Where-Object {$_.Enabled -eq $true}).Count
+$DisabledComputers = ($Computers | Where-Object {$_.Enabled -eq $false}).Count
+
+$DCList = ($DCs | ForEach-Object { "  $($_.Name) - $($_.OperatingSystem) - GC: $($_.IsGlobalCatalog)" }) -join "`n"
+$TopOS = ($Computers | Group-Object OperatingSystem | Sort-Object Count -Descending | Select-Object -First 5 | ForEach-Object { "  $($_.Name): $($_.Count)" }) -join "`n"
+$FileList = (Get-ChildItem $OutputPath\*_$Timestamp.* | ForEach-Object { "  - $($_.Name)" }) -join "`n"
 
 $Summary = @"
 =========================================
@@ -267,16 +280,16 @@ Functional Level: Domain=$($Domain.DomainMode), Forest=$($Forest.ForestMode)
 RESOURCE COUNTS
 ---------------
 Users: $($Users.Count)
-  - Enabled: $(($Users | Where-Object {$_.Enabled -eq $true}).Count)
-  - Disabled: $(($Users | Where-Object {$_.Enabled -eq $false}).Count)
+  Enabled: $EnabledUsers
+  Disabled: $DisabledUsers
 
 Groups: $($Groups.Count)
-  - Security Groups: $(($Groups | Where-Object {$_.GroupCategory -eq 'Security'}).Count)
-  - Distribution Groups: $(($Groups | Where-Object {$_.GroupCategory -eq 'Distribution'}).Count)
+  Security Groups: $SecurityGroups
+  Distribution Groups: $DistGroups
 
 Computers: $($Computers.Count)
-  - Enabled: $(($Computers | Where-Object {$_.Enabled -eq $true}).Count)
-  - Disabled: $(($Computers | Where-Object {$_.Enabled -eq $false}).Count)
+  Enabled: $EnabledComputers
+  Disabled: $DisabledComputers
 
 Organizational Units: $($OUs.Count)
 Domain Controllers: $($DCs.Count)
@@ -290,7 +303,7 @@ Trusts: $($Trusts.Count)
 
 DOMAIN CONTROLLERS
 ------------------
-$($DCs | ForEach-Object { "$($_.Name) - $($_.OperatingSystem) - GC: $($_.IsGlobalCatalog)" } | Out-String)
+$DCList
 
 FSMO ROLES
 ----------
@@ -302,11 +315,11 @@ Infrastructure Master: $($Domain.InfrastructureMaster)
 
 OPERATING SYSTEMS (Top 5)
 -------------------------
-$($Computers | Group-Object OperatingSystem | Sort-Object Count -Descending | Select-Object -First 5 | ForEach-Object { "$($_.Name): $($_.Count)" } | Out-String)
+$TopOS
 
 FILES GENERATED
 ---------------
-$(Get-ChildItem $OutputPath\*_$Timestamp.* | ForEach-Object { "- $($_.Name)" } | Out-String)
+$FileList
 
 OUTPUT LOCATION
 ---------------
