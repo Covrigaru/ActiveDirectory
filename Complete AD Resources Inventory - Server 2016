@@ -1,0 +1,336 @@
+# Complete Active Directory Resources Inventory Script
+# Compatible with Windows Server 2016
+# Run as Domain Admin or user with read access to AD
+
+#Requires -Modules ActiveDirectory
+
+# Configuration
+$OutputPath = "C:\Temp\AD_Resources_Inventory"
+$Timestamp = Get-Date -Format "yyyy-MM-dd_HHmmss"
+
+# Create output directory
+if (-not (Test-Path $OutputPath)) {
+    New-Item -Path $OutputPath -ItemType Directory -Force | Out-Null
+}
+
+Write-Host ""
+Write-Host "=========================================" -ForegroundColor Cyan
+Write-Host " Active Directory Resources Inventory" -ForegroundColor Cyan
+Write-Host "=========================================" -ForegroundColor Cyan
+Write-Host ""
+
+# Get domain and forest information
+$Domain = Get-ADDomain
+$Forest = Get-ADForest
+
+Write-Host "Domain: $($Domain.DNSRoot)" -ForegroundColor Yellow
+Write-Host "Forest: $($Forest.Name)" -ForegroundColor Yellow
+Write-Host "Output: $OutputPath" -ForegroundColor Yellow
+Write-Host ""
+
+# ==========================================
+# 1. USERS
+# ==========================================
+Write-Host "[1/15] Exporting Users..." -ForegroundColor Cyan
+$Users = Get-ADUser -Filter * -Properties DisplayName, EmailAddress, Enabled, LastLogonDate, Department, Title, whenCreated |
+    Select-Object SamAccountName, DisplayName, EmailAddress, Enabled, LastLogonDate, Department, Title, whenCreated, DistinguishedName
+
+$Users | Export-Csv -Path "$OutputPath\Users_$Timestamp.csv" -NoTypeInformation
+Write-Host "  ✓ Exported $($Users.Count) users" -ForegroundColor Green
+
+# ==========================================
+# 2. GROUPS
+# ==========================================
+Write-Host "[2/15] Exporting Groups..." -ForegroundColor Cyan
+$Groups = Get-ADGroup -Filter * -Properties Description, GroupCategory, GroupScope, MemberOf, whenCreated, ManagedBy |
+    Select-Object Name, Description, GroupCategory, GroupScope, 
+        @{Name="MemberCount";Expression={(Get-ADGroupMember -Identity $_.DistinguishedName -ErrorAction SilentlyContinue | Measure-Object).Count}},
+        @{Name="ManagedBy";Expression={
+            if($_.ManagedBy){
+                try { (Get-ADUser $_.ManagedBy).DisplayName } catch { $_.ManagedBy }
+            }
+        }},
+        whenCreated, DistinguishedName
+
+$Groups | Export-Csv -Path "$OutputPath\Groups_$Timestamp.csv" -NoTypeInformation
+Write-Host "  ✓ Exported $($Groups.Count) groups" -ForegroundColor Green
+
+# ==========================================
+# 3. COMPUTERS
+# ==========================================
+Write-Host "[3/15] Exporting Computers..." -ForegroundColor Cyan
+$Computers = Get-ADComputer -Filter * -Properties OperatingSystem, OperatingSystemVersion, LastLogonDate, IPv4Address, Enabled, whenCreated, Description |
+    Select-Object Name, DNSHostName, OperatingSystem, OperatingSystemVersion, IPv4Address, Enabled, LastLogonDate, whenCreated, Description, DistinguishedName
+
+$Computers | Export-Csv -Path "$OutputPath\Computers_$Timestamp.csv" -NoTypeInformation
+Write-Host "  ✓ Exported $($Computers.Count) computers" -ForegroundColor Green
+
+# ==========================================
+# 4. ORGANIZATIONAL UNITS (OUs)
+# ==========================================
+Write-Host "[4/15] Exporting Organizational Units..." -ForegroundColor Cyan
+$OUs = Get-ADOrganizationalUnit -Filter * -Properties Description, ProtectedFromAccidentalDeletion, whenCreated, ManagedBy |
+    Select-Object Name, Description, ProtectedFromAccidentalDeletion, 
+        @{Name="ManagedBy";Expression={
+            if($_.ManagedBy){
+                try { (Get-ADUser $_.ManagedBy).DisplayName } catch { $_.ManagedBy }
+            }
+        }},
+        whenCreated, DistinguishedName, CanonicalName
+
+$OUs | Export-Csv -Path "$OutputPath\OrganizationalUnits_$Timestamp.csv" -NoTypeInformation
+Write-Host "  ✓ Exported $($OUs.Count) organizational units" -ForegroundColor Green
+
+# ==========================================
+# 5. DOMAIN CONTROLLERS
+# ==========================================
+Write-Host "[5/15] Exporting Domain Controllers..." -ForegroundColor Cyan
+$DCs = Get-ADDomainController -Filter * |
+    Select-Object Name, Domain, Forest, Site, OperatingSystem, OperatingSystemVersion, IPv4Address, IsGlobalCatalog, IsReadOnly, Enabled
+
+$DCs | Export-Csv -Path "$OutputPath\DomainControllers_$Timestamp.csv" -NoTypeInformation
+Write-Host "  ✓ Exported $($DCs.Count) domain controllers" -ForegroundColor Green
+
+# ==========================================
+# 6. SITES AND SUBNETS
+# ==========================================
+Write-Host "[6/15] Exporting Sites..." -ForegroundColor Cyan
+$Sites = Get-ADReplicationSite -Filter * -Properties Description, Location |
+    Select-Object Name, Description, Location, DistinguishedName
+
+$Sites | Export-Csv -Path "$OutputPath\Sites_$Timestamp.csv" -NoTypeInformation
+Write-Host "  ✓ Exported $($Sites.Count) sites" -ForegroundColor Green
+
+Write-Host "[7/15] Exporting Subnets..." -ForegroundColor Cyan
+$Subnets = Get-ADReplicationSubnet -Filter * -Properties Description, Location, Site |
+    Select-Object Name, Description, Location, Site, DistinguishedName
+
+$Subnets | Export-Csv -Path "$OutputPath\Subnets_$Timestamp.csv" -NoTypeInformation
+Write-Host "  ✓ Exported $($Subnets.Count) subnets" -ForegroundColor Green
+
+# ==========================================
+# 7. GROUP POLICY OBJECTS (GPOs)
+# ==========================================
+Write-Host "[8/15] Exporting Group Policy Objects..." -ForegroundColor Cyan
+Import-Module GroupPolicy -ErrorAction SilentlyContinue
+
+if (Get-Module -Name GroupPolicy) {
+    $GPOs = Get-GPO -All | Select-Object DisplayName, 
+        @{Name="Status";Expression={$_.GpoStatus}},
+        Owner, CreationTime, ModificationTime, 
+        @{Name="UserVersionDS";Expression={$_.User.DSVersion}},
+        @{Name="ComputerVersionDS";Expression={$_.Computer.DSVersion}},
+        Id, DomainName
+
+    $GPOs | Export-Csv -Path "$OutputPath\GroupPolicyObjects_$Timestamp.csv" -NoTypeInformation
+    Write-Host "  ✓ Exported $($GPOs.Count) GPOs" -ForegroundColor Green
+} else {
+    Write-Host "  ⚠ GroupPolicy module not available" -ForegroundColor Yellow
+}
+
+# ==========================================
+# 8. CONTACTS
+# ==========================================
+Write-Host "[9/15] Exporting Contacts..." -ForegroundColor Cyan
+$Contacts = Get-ADObject -Filter {objectClass -eq "contact"} -Properties DisplayName, mail, telephoneNumber, company, whenCreated |
+    Select-Object Name, 
+        @{Name="DisplayName";Expression={$_.DisplayName}},
+        @{Name="Email";Expression={$_.mail}},
+        @{Name="Phone";Expression={$_.telephoneNumber}},
+        @{Name="Company";Expression={$_.company}},
+        whenCreated, DistinguishedName
+
+$Contacts | Export-Csv -Path "$OutputPath\Contacts_$Timestamp.csv" -NoTypeInformation
+Write-Host "  ✓ Exported $($Contacts.Count) contacts" -ForegroundColor Green
+
+# ==========================================
+# 9. PRINTERS
+# ==========================================
+Write-Host "[10/15] Exporting Printers..." -ForegroundColor Cyan
+$Printers = Get-ADObject -Filter {objectClass -eq "printQueue"} -Properties printerName, serverName, portName, driverName, location, whenCreated |
+    Select-Object Name,
+        @{Name="PrinterName";Expression={$_.printerName}},
+        @{Name="ServerName";Expression={$_.serverName}},
+        @{Name="PortName";Expression={$_.portName}},
+        @{Name="Driver";Expression={$_.driverName}},
+        @{Name="Location";Expression={$_.location}},
+        whenCreated, DistinguishedName
+
+$Printers | Export-Csv -Path "$OutputPath\Printers_$Timestamp.csv" -NoTypeInformation
+Write-Host "  ✓ Exported $($Printers.Count) printers" -ForegroundColor Green
+
+# ==========================================
+# 10. SHARED FOLDERS
+# ==========================================
+Write-Host "[11/15] Exporting Shared Folders..." -ForegroundColor Cyan
+$SharedFolders = Get-ADObject -Filter {objectClass -eq "volume"} -Properties uNCName, whenCreated |
+    Select-Object Name,
+        @{Name="UNCPath";Expression={$_.uNCName}},
+        whenCreated, DistinguishedName
+
+$SharedFolders | Export-Csv -Path "$OutputPath\SharedFolders_$Timestamp.csv" -NoTypeInformation
+Write-Host "  ✓ Exported $($SharedFolders.Count) shared folders" -ForegroundColor Green
+
+# ==========================================
+# 11. SERVICES (Service Connection Points)
+# ==========================================
+Write-Host "[12/15] Exporting Service Connection Points..." -ForegroundColor Cyan
+$Services = Get-ADObject -Filter {objectClass -eq "serviceConnectionPoint"} -Properties serviceDNSName, serviceClassName, whenCreated |
+    Select-Object Name,
+        @{Name="DNSName";Expression={$_.serviceDNSName}},
+        @{Name="ServiceClass";Expression={$_.serviceClassName}},
+        whenCreated, DistinguishedName
+
+$Services | Export-Csv -Path "$OutputPath\ServiceConnectionPoints_$Timestamp.csv" -NoTypeInformation
+Write-Host "  ✓ Exported $($Services.Count) service connection points" -ForegroundColor Green
+
+# ==========================================
+# 12. TRUSTS
+# ==========================================
+Write-Host "[13/15] Exporting Domain Trusts..." -ForegroundColor Cyan
+$Trusts = Get-ADTrust -Filter * |
+    Select-Object Name, Direction, TrustType, 
+        @{Name="TrustingDomain";Expression={$_.Source}},
+        @{Name="TrustedDomain";Expression={$_.Target}},
+        Created, Modified
+
+$Trusts | Export-Csv -Path "$OutputPath\Trusts_$Timestamp.csv" -NoTypeInformation
+Write-Host "  ✓ Exported $($Trusts.Count) trusts" -ForegroundColor Green
+
+# ==========================================
+# 13. FSMO ROLES
+# ==========================================
+Write-Host "[14/15] Exporting FSMO Roles..." -ForegroundColor Cyan
+$FSMORoles = @()
+$FSMORoles += [PSCustomObject]@{
+    Role = "Schema Master"
+    Holder = $Forest.SchemaMaster
+    Scope = "Forest"
+}
+$FSMORoles += [PSCustomObject]@{
+    Role = "Domain Naming Master"
+    Holder = $Forest.DomainNamingMaster
+    Scope = "Forest"
+}
+$FSMORoles += [PSCustomObject]@{
+    Role = "PDC Emulator"
+    Holder = $Domain.PDCEmulator
+    Scope = "Domain"
+}
+$FSMORoles += [PSCustomObject]@{
+    Role = "RID Master"
+    Holder = $Domain.RIDMaster
+    Scope = "Domain"
+}
+$FSMORoles += [PSCustomObject]@{
+    Role = "Infrastructure Master"
+    Holder = $Domain.InfrastructureMaster
+    Scope = "Domain"
+}
+
+$FSMORoles | Export-Csv -Path "$OutputPath\FSMO_Roles_$Timestamp.csv" -NoTypeInformation
+Write-Host "  ✓ Exported FSMO roles" -ForegroundColor Green
+
+# ==========================================
+# 14. DNS ZONES (if DNS role is installed)
+# ==========================================
+Write-Host "[15/15] Exporting DNS Zones..." -ForegroundColor Cyan
+try {
+    $DNSZones = Get-DnsServerZone -ErrorAction SilentlyContinue |
+        Select-Object ZoneName, ZoneType, IsAutoCreated, IsDsIntegrated, IsReverseLookupZone, IsSigned
+
+    if ($DNSZones) {
+        $DNSZones | Export-Csv -Path "$OutputPath\DNS_Zones_$Timestamp.csv" -NoTypeInformation
+        Write-Host "  ✓ Exported $($DNSZones.Count) DNS zones" -ForegroundColor Green
+    } else {
+        Write-Host "  ⚠ No DNS zones found or DNS role not installed" -ForegroundColor Yellow
+    }
+} catch {
+    Write-Host "  ⚠ DNS module not available" -ForegroundColor Yellow
+}
+
+# ==========================================
+# SUMMARY REPORT
+# ==========================================
+Write-Host ""
+Write-Host "Generating Summary Report..." -ForegroundColor Cyan
+
+$Summary = @"
+=========================================
+ACTIVE DIRECTORY RESOURCES INVENTORY
+=========================================
+Domain: $($Domain.DNSRoot)
+Forest: $($Forest.Name)
+Generated: $(Get-Date)
+Functional Level: Domain=$($Domain.DomainMode), Forest=$($Forest.ForestMode)
+
+RESOURCE COUNTS
+---------------
+Users: $($Users.Count)
+  - Enabled: $(($Users | Where-Object {$_.Enabled -eq $true}).Count)
+  - Disabled: $(($Users | Where-Object {$_.Enabled -eq $false}).Count)
+
+Groups: $($Groups.Count)
+  - Security Groups: $(($Groups | Where-Object {$_.GroupCategory -eq 'Security'}).Count)
+  - Distribution Groups: $(($Groups | Where-Object {$_.GroupCategory -eq 'Distribution'}).Count)
+
+Computers: $($Computers.Count)
+  - Enabled: $(($Computers | Where-Object {$_.Enabled -eq $true}).Count)
+  - Disabled: $(($Computers | Where-Object {$_.Enabled -eq $false}).Count)
+
+Organizational Units: $($OUs.Count)
+Domain Controllers: $($DCs.Count)
+Sites: $($Sites.Count)
+Subnets: $($Subnets.Count)
+Contacts: $($Contacts.Count)
+Printers: $($Printers.Count)
+Shared Folders: $($SharedFolders.Count)
+Service Connection Points: $($Services.Count)
+Trusts: $($Trusts.Count)
+
+DOMAIN CONTROLLERS
+------------------
+$($DCs | ForEach-Object { "$($_.Name) - $($_.OperatingSystem) - GC: $($_.IsGlobalCatalog)" } | Out-String)
+
+FSMO ROLES
+----------
+Schema Master: $($Forest.SchemaMaster)
+Domain Naming Master: $($Forest.DomainNamingMaster)
+PDC Emulator: $($Domain.PDCEmulator)
+RID Master: $($Domain.RIDMaster)
+Infrastructure Master: $($Domain.InfrastructureMaster)
+
+OPERATING SYSTEMS (Top 5)
+-------------------------
+$($Computers | Group-Object OperatingSystem | Sort-Object Count -Descending | Select-Object -First 5 | ForEach-Object { "$($_.Name): $($_.Count)" } | Out-String)
+
+FILES GENERATED
+---------------
+$(Get-ChildItem $OutputPath\*_$Timestamp.* | ForEach-Object { "- $($_.Name)" } | Out-String)
+
+OUTPUT LOCATION
+---------------
+$OutputPath
+
+=========================================
+"@
+
+# Save summary
+$Summary | Out-File -FilePath "$OutputPath\Summary_Report_$Timestamp.txt"
+
+# Display summary
+Write-Host ""
+Write-Host $Summary -ForegroundColor Yellow
+Write-Host ""
+Write-Host "=========================================" -ForegroundColor Green
+Write-Host "  INVENTORY COMPLETE!" -ForegroundColor Green
+Write-Host "=========================================" -ForegroundColor Green
+Write-Host ""
+Write-Host "All reports saved to: $OutputPath" -ForegroundColor Cyan
+Write-Host ""
+
+# Optional: Open folder
+$OpenFolder = Read-Host "Open output folder? (Y/N)"
+if ($OpenFolder -eq "Y" -or $OpenFolder -eq "y") {
+    explorer $OutputPath
+}
