@@ -1,0 +1,123 @@
+# Export ALL AD Groups with ALL Properties
+# Windows Server 2016
+
+Get-ADGroup -Filter * -Properties * | 
+    Export-Csv -Path "C:\Temp\AD_Groups_Complete.csv" -NoTypeInformation
+
+Write-Host "All groups with all properties exported to C:\Temp\AD_Groups_Complete.csv" -ForegroundColor Green
+
+#####################
+
+# Export groups with commonly used properties (organized)
+
+Get-ADGroup -Filter * -Properties * | 
+    Select-Object `
+        # Basic Info
+        Name,
+        SamAccountName,
+        DisplayName,
+        Description,
+        
+        # Group Type
+        GroupCategory,
+        GroupScope,
+        
+        # Management
+        ManagedBy,
+        
+        # Members
+        @{Name="MemberCount";Expression={($_.Members | Measure-Object).Count}},
+        
+        # Location
+        DistinguishedName,
+        CanonicalName,
+        
+        # Dates
+        whenCreated,
+        whenChanged,
+        
+        # Additional
+        ObjectGUID,
+        SID,
+        ProtectedFromAccidentalDeletion |
+    Export-Csv -Path "C:\Temp\AD_Groups_Organized.csv" -NoTypeInformation
+
+Write-Host "Done! Exported to C:\Temp\AD_Groups_Organized.csv" -ForegroundColor Green
+
+
+###################
+
+# Export groups with member counts
+
+Get-ADGroup -Filter * -Properties Members, Description, ManagedBy | 
+    Select-Object `
+        Name,
+        Description,
+        GroupCategory,
+        GroupScope,
+        @{Name="MemberCount";Expression={(Get-ADGroupMember -Identity $_.DistinguishedName -ErrorAction SilentlyContinue | Measure-Object).Count}},
+        @{Name="ManagedBy";Expression={
+            if($_.ManagedBy){
+                try { (Get-ADUser $_.ManagedBy).DisplayName } 
+                catch { $_.ManagedBy }
+            }
+        }},
+        whenCreated,
+        DistinguishedName |
+    Export-Csv -Path "C:\Temp\AD_Groups_WithMembers.csv" -NoTypeInformation
+
+Write-Host "Done! Exported to C:\Temp\AD_Groups_WithMembers.csv" -ForegroundColor Green
+
+
+#############################
+
+
+#Groups with member list
+
+# Export All Groups with Members List
+# Windows Server 2016
+
+$Groups = Get-ADGroup -Filter * -Properties Description, ManagedBy
+
+$Results = foreach ($Group in $Groups) {
+    Write-Host "Processing: $($Group.Name)" -ForegroundColor Cyan
+    
+    # Get group members
+    $Members = Get-ADGroupMember -Identity $Group.DistinguishedName -ErrorAction SilentlyContinue
+    
+    # Create output for each member
+    foreach ($Member in $Members) {
+        [PSCustomObject]@{
+            GroupName = $Group.Name
+            GroupDescription = $Group.Description
+            GroupCategory = $Group.GroupCategory
+            GroupScope = $Group.GroupScope
+            MemberName = $Member.Name
+            MemberSamAccountName = $Member.SamAccountName
+            MemberType = $Member.objectClass
+            MemberDistinguishedName = $Member.DistinguishedName
+        }
+    }
+    
+    # If group has no members, still show the group
+    if (-not $Members) {
+        [PSCustomObject]@{
+            GroupName = $Group.Name
+            GroupDescription = $Group.Description
+            GroupCategory = $Group.GroupCategory
+            GroupScope = $Group.GroupScope
+            MemberName = "(No Members)"
+            MemberSamAccountName = ""
+            MemberType = ""
+            MemberDistinguishedName = ""
+        }
+    }
+}
+
+$Results | Export-Csv -Path "C:\Temp\AD_Groups_With_Members.csv" -NoTypeInformation
+
+Write-Host ""
+Write-Host "Export Complete!" -ForegroundColor Green
+Write-Host "File: C:\Temp\AD_Groups_With_Members.csv" -ForegroundColor Cyan
+Write-Host "Total Groups: $($Groups.Count)" -ForegroundColor Yellow
+Write-Host "Total Rows: $($Results.Count)" -ForegroundColor Yellow
