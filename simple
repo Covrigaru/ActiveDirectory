@@ -7,3 +7,15 @@ Get-ADUser -Filter * -Properties DisplayName, EmailAddress, Enabled, Department,
     Export-Csv -Path "C:\Temp\AD_Users.csv" -NoTypeInformation
 
 Write-Host "Users exported to C:\Temp\AD_Users.csv" -ForegroundColor Green
+
+
+
+#####################
+
+# Export ALL AD Users with ALL Properties
+# Windows Server 2016
+
+Get-ADUser -Filter * -Properties * | 
+    Export-Csv -Path "C:\Temp\AD_Users_Complete.csv" -NoTypeInformation
+
+Write-Host "All users with all properties exported to C:\Temp\AD_Users_Complete.csv" -ForegroundColor Green
