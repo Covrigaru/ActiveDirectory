@@ -42,3 +42,22 @@ Get-ADComputer -Filter * -Properties * |
     Export-Csv -Path "C:\Temp\AD_Computers_Complete.csv" -NoTypeInformation
 
 Write-Host "All computers exported to C:\Temp\AD_Computers_Complete.csv" -ForegroundColor Green
+
+
+########### Fix 3: Use Alternative Syntax (Most Common Fix)
+
+# Use quotes around the filter
+Get-ADComputer -Filter "*" -Properties * | 
+    Export-Csv -Path "C:\Temp\AD_Computers_Complete.csv" -NoTypeInformation
+
+Write-Host "Done!" -ForegroundColor Green
+
+
+################# Fix 5: Use SearchBase Instead
+
+
+# Specify your domain controller explicitly
+Get-ADComputer -Filter * -Properties * -Server "DC01.yourdomain.local" | 
+    Export-Csv -Path "C:\Temp\AD_Computers_Complete.csv" -NoTypeInformation
+
+# Replace "DC01.yourdomain.local" with your actual DC name
