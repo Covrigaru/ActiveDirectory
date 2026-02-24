@@ -1,0 +1,7 @@
+# Quick check
+$Count = (Get-ADObject -Filter {objectClass -eq "inetOrgPerson"}).Count
+Write-Host "InetOrgPerson objects found: $Count" -ForegroundColor Cyan
+
+if ($Count -eq 0) {
+    Write-Host "You likely want to export standard users instead." -ForegroundColor Yellow
+}
