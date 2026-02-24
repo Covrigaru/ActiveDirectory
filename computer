@@ -31,3 +31,14 @@ Get-ADComputer -Filter * -Properties * |
         whenCreated,
         DistinguishedName |
     Export-Csv -Path "C:\Temp\AD_Computers_Complete.csv" -NoTypeInformation
+
+
+############## simple
+
+# Export ALL AD Computers with ALL Properties
+# Windows Server 2016
+
+Get-ADComputer -Filter * -Properties * | 
+    Export-Csv -Path "C:\Temp\AD_Computers_Complete.csv" -NoTypeInformation
+
+Write-Host "All computers exported to C:\Temp\AD_Computers_Complete.csv" -ForegroundColor Green
