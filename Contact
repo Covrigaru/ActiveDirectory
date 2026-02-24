@@ -1,0 +1,61 @@
+# Export ALL AD Contacts with ALL Properties
+# Windows Server 2016
+
+Get-ADObject -Filter {objectClass -eq "contact"} -Properties * | 
+    Export-Csv -Path "C:\Temp\AD_Contacts_Complete.csv" -NoTypeInformation
+
+Write-Host "All contacts with all properties exported to C:\Temp\AD_Contacts_Complete.csv" -ForegroundColor Green
+
+
+
+========================
+
+
+# Export contacts with commonly used properties (organized)
+
+Get-ADObject -Filter {objectClass -eq "contact"} -Properties * | 
+    Select-Object `
+        # Basic Info
+        Name,
+        DisplayName,
+        @{Name="FirstName";Expression={$_.givenName}},
+        @{Name="LastName";Expression={$_.sn}},
+        Description,
+        
+        # Contact Info
+        @{Name="Email";Expression={$_.mail}},
+        @{Name="EmailAddress";Expression={$_.targetAddress}},
+        @{Name="Phone";Expression={$_.telephoneNumber}},
+        @{Name="MobilePhone";Expression={$_.mobile}},
+        @{Name="HomePhone";Expression={$_.homePhone}},
+        @{Name="Fax";Expression={$_.facsimileTelephoneNumber}},
+        
+        # Address
+        @{Name="Street";Expression={$_.streetAddress}},
+        @{Name="City";Expression={$_.l}},
+        @{Name="State";Expression={$_.st}},
+        @{Name="PostalCode";Expression={$_.postalCode}},
+        @{Name="Country";Expression={$_.c}},
+        @{Name="CountryCode";Expression={$_.co}},
+        
+        # Organization
+        @{Name="Title";Expression={$_.title}},
+        @{Name="Company";Expression={$_.company}},
+        @{Name="Department";Expression={$_.department}},
+        @{Name="Office";Expression={$_.physicalDeliveryOfficeName}},
+        
+        # Location
+        DistinguishedName,
+        CanonicalName,
+        
+        # Dates
+        whenCreated,
+        whenChanged,
+        
+        # Additional
+        ObjectGUID,
+        info,
+        @{Name="Notes";Expression={$_.info}} |
+    Export-Csv -Path "C:\Temp\AD_Contacts_Organized.csv" -NoTypeInformation
+
+Write-Host "Done! Exported to C:\Temp\AD_Contacts_Organized.csv" -ForegroundColor Green
