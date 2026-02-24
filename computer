@@ -1,46 +1,33 @@
-# Export computers with commonly used properties (organized)
-
 Get-ADComputer -Filter * -Properties * | 
     Select-Object `
-        # Basic Info
         Name,
         DNSHostName,
-        Description,
-        
-        # Operating System
         OperatingSystem,
         OperatingSystemVersion,
-        OperatingSystemServicePack,
-        
-        # Network
         IPv4Address,
-        IPv6Address,
-        
-        # Status
         Enabled,
-        
-        # Location
-        Location,
-        CanonicalName,
-        DistinguishedName,
-        
-        # Dates
         LastLogonDate,
-        PasswordLastSet,
+        @{Name="DaysSinceLastLogon";Expression={
+            if($_.LastLogonDate){
+                (New-TimeSpan -Start $_.LastLogonDate -End (Get-Date)).Days
+            } else {
+                "Never"
+            }
+        }},
+        @{Name="Status";Expression={
+            if(-not $_.Enabled){
+                "Disabled"
+            } elseif($_.LastLogonDate -eq $null){
+                "Never Logged On"
+            } elseif((New-TimeSpan -Start $_.LastLogonDate -End (Get-Date)).Days -gt 90){
+                "Inactive (90+ days)"
+            } elseif((New-TimeSpan -Start $_.LastLogonDate -End (Get-Date)).Days -gt 30){
+                "Inactive (30+ days)"
+            } else {
+                "Active"
+            }
+        }},
+        Description,
         whenCreated,
-        whenChanged,
-        
-        # Security
-        LockedOut,
-        PasswordExpired,
-        PasswordNeverExpires,
-        TrustedForDelegation,
-        
-        # Additional
-        ManagedBy,
-        ServicePrincipalNames,
-        ObjectGUID,
-        SID |
-    Export-Csv -Path "C:\Temp\AD_Computers_Organized.csv" -NoTypeInformation
-
-Write-Host "Done! Exported to C:\Temp\AD_Computers_Organized.csv" -ForegroundColor Green
+        DistinguishedName |
+    Export-Csv -Path "C:\Temp\AD_Computers_Complete.csv" -NoTypeInformation
