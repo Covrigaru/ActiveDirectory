@@ -1,0 +1,12 @@
+# Run this first
+$ShareCount = (Get-ADObject -Filter {objectClass -eq "volume"}).Count
+Write-Host "Published Shared Folders: $ShareCount" -ForegroundColor Cyan
+
+if ($ShareCount -gt 0) {
+    Get-ADObject -Filter {objectClass -eq "volume"} -Properties uNCName, description | 
+        Select-Object Name, 
+            @{Name="UNCPath";Expression={$_.uNCName}},
+            Description |
+        Export-Csv -Path "C:\Temp\AD_SharedFolders.csv" -NoTypeInformation
+    Write-Host "Exported to C:\Temp\AD_SharedFolders.csv" -ForegroundColor Green
+}
