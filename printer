@@ -1,0 +1,87 @@
+Get-ADObject -Filter {objectClass -eq "printQueue"} -Properties printerName, serverName, location, driverName, portName, uNCName | 
+    Select-Object `
+        Name,
+        @{Name="PrinterName";Expression={$_.printerName}},
+        @{Name="ServerName";Expression={$_.serverName}},
+        @{Name="Location";Expression={$_.location}},
+        @{Name="Driver";Expression={$_.driverName}},
+        @{Name="UNCPath";Expression={$_.uNCName}} |
+    Export-Csv -Path "C:\Temp\AD_Printers.csv" -NoTypeInformation
+
+
+    ########################################
+
+    # Complete printer diagnostic and export script
+
+Import-Module ActiveDirectory
+
+# Create output folder
+if (-not (Test-Path "C:\Temp")) {
+    New-Item -Path "C:\Temp" -ItemType Directory -Force | Out-Null
+}
+
+Write-Host ""
+Write-Host "=== Active Directory Printer Inventory ===" -ForegroundColor Cyan
+Write-Host ""
+
+Write-Host "Searching for published printers..." -ForegroundColor Yellow
+
+try {
+    $Printers = Get-ADObject -Filter {objectClass -eq "printQueue"} -Properties * -ErrorAction Stop
+    
+    if ($Printers.Count -eq 0) {
+        Write-Host ""
+        Write-Host "No printers found in Active Directory." -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "Printers may not be published to AD." -ForegroundColor Cyan
+        Write-Host "Check your print server settings to enable AD publishing." -ForegroundColor Cyan
+    } else {
+        Write-Host "✓ Found $($Printers.Count) printers" -ForegroundColor Green
+        Write-Host ""
+        
+        # Export
+        $Printers | 
+            Select-Object Name, 
+                @{Name="PrinterName";Expression={$_.printerName}},
+                @{Name="ServerName";Expression={$_.serverName}},
+                @{Name="Location";Expression={$_.location}},
+                @{Name="Driver";Expression={$_.driverName}},
+                @{Name="Port";Expression={$_.portName}},
+                @{Name="UNCPath";Expression={$_.uNCName}},
+                Description,
+                whenCreated,
+                DistinguishedName |
+            Export-Csv -Path "C:\Temp\AD_Printers_Complete.csv" -NoTypeInformation
+        
+        Write-Host "✓ Exported to: C:\Temp\AD_Printers_Complete.csv" -ForegroundColor Green
+        Write-Host ""
+        
+        # Show summary
+        Write-Host "Summary:" -ForegroundColor Cyan
+        Write-Host "  Total Printers: $($Printers.Count)" -ForegroundColor Yellow
+        
+        # By Server
+        $Servers = $Printers | Group-Object serverName | Sort-Object Count -Descending
+        Write-Host "  Print Servers: $($Servers.Count)" -ForegroundColor Yellow
+        
+        # Show top servers
+        Write-Host ""
+        Write-Host "Top Print Servers:" -ForegroundColor Cyan
+        $Servers | Select-Object -First 5 Name, Count | Format-Table -AutoSize
+        
+        # Show sample printers
+        Write-Host "Sample Printers:" -ForegroundColor Cyan
+        $Printers | 
+            Select-Object -First 10 Name, 
+                @{Name="Server";Expression={$_.serverName}},
+                @{Name="Location";Expression={$_.location}} |
+            Format-Table -AutoSize
+    }
+    
+} catch {
+    Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
+}
+
+Write-Host ""
+Write-Host "=== Search Complete ===" -ForegroundColor Cyan
+Write-Host ""
