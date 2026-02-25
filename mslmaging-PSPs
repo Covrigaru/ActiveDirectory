@@ -1,0 +1,29 @@
+# Export ALL msImaging-PSPs Objects with ALL Properties
+# Windows Server 2016
+
+Get-ADObject -Filter {objectClass -eq "msImaging-PSPs"} -Properties * | 
+    Export-Csv -Path "C:\Temp\AD_msImaging-PSPs_Complete.csv" -NoTypeInformation
+
+Write-Host "All msImaging-PSPs objects exported to C:\Temp\AD_msImaging-PSPs_Complete.csv" -ForegroundColor Green
+
+
+
+###################################
+
+# Export msImaging-PSPs with organized properties
+
+Get-ADObject -Filter {objectClass -eq "msImaging-PSPs"} -Properties * | 
+    Select-Object `
+        Name,
+        DisplayName,
+        Description,
+        DistinguishedName,
+        CanonicalName,
+        ObjectGUID,
+        whenCreated,
+        whenChanged,
+        ObjectClass,
+        * |
+    Export-Csv -Path "C:\Temp\AD_msImaging-PSPs_Organized.csv" -NoTypeInformation
+
+Write-Host "Done! Exported to C:\Temp\AD_msImaging-PSPs_Organized.csv" -ForegroundColor Green
