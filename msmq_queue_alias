@@ -1,0 +1,155 @@
+# Complete diagnostic and export script for MSMQ objects
+
+Import-Module ActiveDirectory
+
+# Create output folder
+if (-not (Test-Path "C:\Temp")) {
+    New-Item -Path "C:\Temp" -ItemType Directory -Force | Out-Null
+}
+
+Write-Host ""
+Write-Host "=== MSMQ Active Directory Objects Search ===" -ForegroundColor Cyan
+Write-Host ""
+
+# Check if MSMQ schema extensions exist
+Write-Host "Step 1: Checking if MSMQ schema exists..." -ForegroundColor Yellow
+try {
+    $SchemaPath = (Get-ADRootDSE).schemaNamingContext
+    $MSMQSchema = Get-ADObject -SearchBase $SchemaPath -Filter {lDAPDisplayName -eq "msmqQueue"} -Properties lDAPDisplayName
+    
+    if ($MSMQSchema) {
+        Write-Host "  ✓ MSMQ schema extensions exist" -ForegroundColor Green
+    } else {
+        Write-Host "  ✗ MSMQ schema NOT found" -ForegroundColor Red
+        Write-Host "  MSMQ has not been configured in this AD environment" -ForegroundColor Yellow
+    }
+} catch {
+    Write-Host "  ⚠ Could not check schema: $($_.Exception.Message)" -ForegroundColor Yellow
+}
+
+Write-Host ""
+Write-Host "Step 2: Searching for MSMQ objects..." -ForegroundColor Yellow
+Write-Host ""
+
+# Define MSMQ object classes
+$MSMQClasses = @{
+    "msmqQueueAlias" = "Queue Aliases"
+    "msmqQueue" = "Queues"
+    "msmqSettings" = "Settings"
+    "msmqConfiguration" = "Configurations"
+    "msmqEnterpriseSettings" = "Enterprise Settings"
+    "msmqSiteLink" = "Site Links"
+}
+
+$TotalCount = 0
+$Results = @{}
+
+foreach ($Class in $MSMQClasses.GetEnumerator()) {
+    try {
+        $Objects = Get-ADObject -Filter "objectClass -eq '$($Class.Key)'" -Properties * -ErrorAction SilentlyContinue
+        $Count = ($Objects | Measure-Object).Count
+        $Results[$Class.Key] = $Objects
+        
+        if ($Count -gt 0) {
+            Write-Host "  ✓ $($Class.Value): $Count" -ForegroundColor Green
+            $TotalCount += $Count
+        } else {
+            Write-Host "  ○ $($Class.Value): 0" -ForegroundColor Gray
+        }
+    } catch {
+        Write-Host "  ✗ $($Class.Value): Error" -ForegroundColor Red
+    }
+}
+
+Write-Host ""
+Write-Host "Total MSMQ Objects Found: $TotalCount" -ForegroundColor Cyan
+
+# Export results
+if ($TotalCount -gt 0) {
+    Write-Host ""
+    Write-Host "Step 3: Exporting MSMQ objects..." -ForegroundColor Yellow
+    
+    foreach ($Class in $MSMQClasses.GetEnumerator()) {
+        if (($Results[$Class.Key] | Measure-Object).Count -gt 0) {
+            $FileName = "C:\Temp\AD_MSMQ_$($Class.Value -replace ' ','_').csv"
+            $Results[$Class.Key] | Export-Csv -Path $FileName -NoTypeInformation
+            Write-Host "  ✓ Exported: $FileName" -ForegroundColor Green
+        }
+    }
+    
+    # Create summary
+    $Summary = @"
+=================================
+MSMQ ACTIVE DIRECTORY OBJECTS
+=================================
+Generated: $(Get-Date)
+
+OBJECT COUNTS
+-------------
+Queue Aliases: $(($Results['msmqQueueAlias'] | Measure-Object).Count)
+Queues: $(($Results['msmqQueue'] | Measure-Object).Count)
+Settings: $(($Results['msmqSettings'] | Measure-Object).Count)
+Configurations: $(($Results['msmqConfiguration'] | Measure-Object).Count)
+Enterprise Settings: $(($Results['msmqEnterpriseSettings'] | Measure-Object).Count)
+Site Links: $(($Results['msmqSiteLink'] | Measure-Object).Count)
+
+TOTAL: $TotalCount
+
+FILES EXPORTED
+--------------
+$(Get-ChildItem "C:\Temp\AD_MSMQ_*.csv" | ForEach-Object { "  - $($_.Name)" } | Out-String)
+
+OUTPUT LOCATION
+---------------
+C:\Temp\
+
+=================================
+"@
+    
+    $Summary | Out-File -FilePath "C:\Temp\AD_MSMQ_Summary.txt"
+    
+    Write-Host ""
+    Write-Host $Summary -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "Summary saved to: C:\Temp\AD_MSMQ_Summary.txt" -ForegroundColor Cyan
+    
+} else {
+    Write-Host ""
+    Write-Host "No MSMQ objects found in Active Directory." -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "This is normal if:" -ForegroundColor Cyan
+    Write-Host "  - Message Queuing (MSMQ) is not installed or configured" -ForegroundColor Cyan
+    Write-Host "  - MSMQ is not integrated with Active Directory" -ForegroundColor Cyan
+    Write-Host "  - Your environment doesn't use message queuing" -ForegroundColor Cyan
+}
+
+Write-Host ""
+Write-Host "=== Search Complete ===" -ForegroundColor Cyan
+Write-Host ""
+
+
+
+
+#######################################
+
+# Search for any object with msmq in the class name
+
+$AllMSMQ = Get-ADObject -Filter {objectClass -like "msmq*"} -Properties objectClass, Name, whenCreated
+
+if ($AllMSMQ.Count -eq 0) {
+    Write-Host "No MSMQ objects found" -ForegroundColor Yellow
+} else {
+    Write-Host "Found $($AllMSMQ.Count) MSMQ objects" -ForegroundColor Green
+    Write-Host ""
+    
+    # Group by object class
+    Write-Host "By Object Class:" -ForegroundColor Cyan
+    $AllMSMQ | Group-Object objectClass | 
+        Select-Object Name, Count | 
+        Sort-Object Count -Descending |
+        Format-Table -AutoSize
+    
+    # Export all
+    $AllMSMQ | Export-Csv -Path "C:\Temp\AD_All_MSMQ_Objects.csv" -NoTypeInformation
+    Write-Host "Exported to: C:\Temp\AD_All_MSMQ_Objects.csv" -ForegroundColor Green
+}
