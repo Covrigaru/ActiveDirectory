@@ -1,0 +1,62 @@
+# Export ALL Organizational Units with ALL Properties
+# Windows Server 2016
+
+Get-ADOrganizationalUnit -Filter * -Properties * | 
+    Export-Csv -Path "C:\Temp\AD_OUs_Complete.csv" -NoTypeInformation
+
+Write-Host "All OUs with all properties exported to C:\Temp\AD_OUs_Complete.csv" -ForegroundColor Green
+
+
+############################################
+
+# Export OUs with commonly used properties (organized)
+
+Get-ADOrganizationalUnit -Filter * -Properties * | 
+    Select-Object `
+        # Basic Info
+        Name,
+        Description,
+        
+        # Location
+        DistinguishedName,
+        CanonicalName,
+        @{Name="ParentOU";Expression={
+            $dn = $_.DistinguishedName
+            if($dn -match "OU=([^,]+),(.+)"){
+                $matches[2]
+            }
+        }},
+        
+        # Management
+        ManagedBy,
+        @{Name="ManagedByName";Expression={
+            if($_.ManagedBy){
+                try { (Get-ADUser $_.ManagedBy).DisplayName }
+                catch { (Get-ADGroup $_.ManagedBy -ErrorAction SilentlyContinue).Name }
+                catch { $_.ManagedBy }
+            }
+        }},
+        
+        # Protection
+        ProtectedFromAccidentalDeletion,
+        
+        # Dates
+        whenCreated,
+        whenChanged,
+        
+        # Security
+        @{Name="InheritanceBlocked";Expression={
+            $acl = Get-Acl "AD:\$($_.DistinguishedName)" -ErrorAction SilentlyContinue
+            if($acl){
+                -not $acl.AreAccessRulesProtected
+            }
+        }},
+        
+        # Additional
+        ObjectGUID,
+        @{Name="Level";Expression={
+            ($_.DistinguishedName -split "OU=" | Measure-Object).Count - 1
+        }} |
+    Export-Csv -Path "C:\Temp\AD_OUs_Organized.csv" -NoTypeInformation
+
+Write-Host "Done! Exported to C:\Temp\AD_OUs_Organized.csv" -ForegroundColor Green
