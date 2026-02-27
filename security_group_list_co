@@ -1,0 +1,471 @@
+# Export SECURITY GROUPS ONLY with Full Control Permissions and Members
+# Windows Server 2016 Compatible
+# Lists security groups, who has Full Control, and all members with email addresses
+
+#Requires -Modules ActiveDirectory
+
+# Configuration
+$OutputPath = "C:\Temp\AD_Security_Groups"
+$Timestamp = Get-Date -Format "yyyy-MM-dd_HHmmss"
+
+# Create output directory
+if (-not (Test-Path $OutputPath)) {
+    New-Item -Path $OutputPath -ItemType Directory -Force | Out-Null
+}
+
+Write-Host ""
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "SECURITY GROUPS Export" -ForegroundColor Cyan
+Write-Host "Full Control Permissions + Members" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host ""
+
+# Get ONLY Security Groups
+Write-Host "Retrieving SECURITY groups only..." -ForegroundColor Yellow
+$AllGroups = Get-ADGroup -Filter {GroupCategory -eq "Security"} -Properties Description, ManagedBy, whenCreated, whenChanged, GroupScope
+
+Write-Host "Found $($AllGroups.Count) SECURITY groups" -ForegroundColor Green
+Write-Host ""
+
+# Arrays to store different exports
+$SecurityGroupSummary = @()
+$SecurityGroupMembers = @()
+$FullControlList = @()
+
+$Counter = 0
+
+foreach ($Group in $AllGroups) {
+    $Counter++
+    Write-Progress -Activity "Processing Security Groups" -Status "Group $Counter of $($AllGroups.Count): $($Group.Name)" -PercentComplete (($Counter / $AllGroups.Count) * 100)
+    
+    Write-Host "Processing: $($Group.Name) [$($Group.GroupScope)]" -ForegroundColor Cyan
+    
+    # Get ACL for the group
+    try {
+        $ACL = Get-Acl -Path "AD:\$($Group.DistinguishedName)"
+        
+        # Find who has Full Control
+        $FullControlUsers = @()
+        
+        foreach ($Access in $ACL.Access) {
+            # Check for Full Control (GenericAll)
+            if ($Access.ActiveDirectoryRights -match "GenericAll" -and $Access.AccessControlType -eq "Allow") {
+                $Identity = $Access.IdentityReference.Value
+                
+                # Try to resolve to friendly name
+                try {
+                    if ($Identity -match "^S-1-5") {
+                        # It's a SID, try to resolve
+                        $ResolvedIdentity = (New-Object System.Security.Principal.SecurityIdentifier($Identity)).Translate([System.Security.Principal.NTAccount]).Value
+                    } else {
+                        $ResolvedIdentity = $Identity
+                    }
+                } catch {
+                    $ResolvedIdentity = $Identity
+                }
+                
+                $FullControlUsers += $ResolvedIdentity
+                
+                # Add to Full Control list
+                $FullControlList += [PSCustomObject]@{
+                    SecurityGroupName = $Group.Name
+                    GroupScope = $Group.GroupScope
+                    GroupDN = $Group.DistinguishedName
+                    IdentityWithFullControl = $ResolvedIdentity
+                    PermissionType = "Full Control (GenericAll)"
+                }
+            }
+        }
+        
+        # Get group members recursively (includes nested groups)
+        Write-Host "  Getting members (including nested)..." -ForegroundColor Gray
+        $DirectMembers = Get-ADGroupMember -Identity $Group.DistinguishedName -ErrorAction SilentlyContinue
+        $DirectMemberCount = ($DirectMembers | Measure-Object).Count
+        
+        # Get recursive members (all users including from nested groups)
+        try {
+            $RecursiveMembers = Get-ADGroupMember -Identity $Group.DistinguishedName -Recursive -ErrorAction SilentlyContinue
+            $RecursiveMemberCount = ($RecursiveMembers | Measure-Object).Count
+        } catch {
+            $RecursiveMembers = $DirectMembers
+            $RecursiveMemberCount = $DirectMemberCount
+        }
+        
+        # Get managed by name and email
+        $ManagedByName = ""
+        $ManagedByEmail = ""
+        if ($Group.ManagedBy) {
+            try {
+                $ManagedByObj = Get-ADUser $Group.ManagedBy -Properties DisplayName, EmailAddress -ErrorAction SilentlyContinue
+                if ($ManagedByObj) {
+                    $ManagedByName = $ManagedByObj.DisplayName
+                    $ManagedByEmail = $ManagedByObj.EmailAddress
+                } else {
+                    $ManagedByName = $Group.ManagedBy
+                }
+            } catch {
+                $ManagedByName = $Group.ManagedBy
+            }
+        }
+        
+        # Add to security group summary
+        $SecurityGroupSummary += [PSCustomObject]@{
+            SecurityGroupName = $Group.Name
+            Description = $Group.Description
+            GroupScope = $Group.GroupScope
+            DirectMemberCount = $DirectMemberCount
+            RecursiveMemberCount = $RecursiveMemberCount
+            ManagedBy = $ManagedByName
+            ManagedByEmail = $ManagedByEmail
+            FullControlPermissions = ($FullControlUsers -join "; ")
+            FullControlCount = $FullControlUsers.Count
+            whenCreated = $Group.whenCreated
+            whenChanged = $Group.whenChanged
+            DistinguishedName = $Group.DistinguishedName
+        }
+        
+        # Process each member (direct and nested)
+        if ($RecursiveMembers) {
+            Write-Host "  Processing $RecursiveMemberCount members (recursive)..." -ForegroundColor Gray
+            
+            # Track processed members to avoid duplicates
+            $ProcessedMembers = @{}
+            
+            foreach ($Member in $RecursiveMembers) {
+                # Skip if already processed
+                if ($ProcessedMembers.ContainsKey($Member.SamAccountName)) {
+                    continue
+                }
+                $ProcessedMembers[$Member.SamAccountName] = $true
+                
+                # Get member details
+                $MemberName = ""
+                $MemberEmail = ""
+                $MemberType = $Member.objectClass
+                $MemberEnabled = $null
+                $IsDirect = $DirectMembers | Where-Object { $_.SamAccountName -eq $Member.SamAccountName }
+                $MembershipType = if ($IsDirect) { "Direct" } else { "Nested" }
+                
+                if ($Member.objectClass -eq "user") {
+                    try {
+                        $UserDetails = Get-ADUser -Identity $Member.SamAccountName -Properties DisplayName, EmailAddress, Enabled, Title, Department -ErrorAction SilentlyContinue
+                        $MemberName = $UserDetails.DisplayName
+                        $MemberEmail = $UserDetails.EmailAddress
+                        $MemberEnabled = $UserDetails.Enabled
+                        $MemberTitle = $UserDetails.Title
+                        $MemberDepartment = $UserDetails.Department
+                    } catch {
+                        $MemberName = $Member.Name
+                        $MemberTitle = ""
+                        $MemberDepartment = ""
+                    }
+                } elseif ($Member.objectClass -eq "group") {
+                    $MemberName = $Member.Name
+                    $MemberType = "Security Group (Nested)"
+                    $MemberTitle = ""
+                    $MemberDepartment = ""
+                } else {
+                    $MemberName = $Member.Name
+                    $MemberTitle = ""
+                    $MemberDepartment = ""
+                }
+                
+                # Add to members list
+                $SecurityGroupMembers += [PSCustomObject]@{
+                    SecurityGroupName = $Group.Name
+                    GroupScope = $Group.GroupScope
+                    GroupDescription = $Group.Description
+                    MembershipType = $MembershipType
+                    MemberUsername = $Member.SamAccountName
+                    MemberName = $MemberName
+                    MemberEmail = $MemberEmail
+                    MemberTitle = $MemberTitle
+                    MemberDepartment = $MemberDepartment
+                    MemberType = $MemberType
+                    MemberEnabled = $MemberEnabled
+                    MemberDN = $Member.DistinguishedName
+                }
+            }
+        }
+        
+    } catch {
+        Write-Host "  Error processing group: $($Group.Name)" -ForegroundColor Red
+        Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor Red
+        
+        # Add error entry
+        $SecurityGroupSummary += [PSCustomObject]@{
+            SecurityGroupName = $Group.Name
+            Description = $Group.Description
+            GroupScope = $Group.GroupScope
+            DirectMemberCount = 0
+            RecursiveMemberCount = 0
+            ManagedBy = ""
+            ManagedByEmail = ""
+            FullControlPermissions = "ERROR: Could not retrieve"
+            FullControlCount = 0
+            whenCreated = $Group.whenCreated
+            whenChanged = $Group.whenChanged
+            DistinguishedName = $Group.DistinguishedName
+        }
+    }
+}
+
+Write-Progress -Activity "Processing Security Groups" -Completed
+
+# Export all results
+Write-Host ""
+Write-Host "========================================" -ForegroundColor Yellow
+Write-Host "Exporting Results" -ForegroundColor Yellow
+Write-Host "========================================" -ForegroundColor Yellow
+Write-Host ""
+
+# 1. Security Groups Summary with Permissions
+$SecurityGroupSummary | Export-Csv -Path "$OutputPath\1_Security_Groups_Summary_$Timestamp.csv" -NoTypeInformation
+Write-Host "✓ 1_Security_Groups_Summary_$Timestamp.csv" -ForegroundColor Green
+Write-Host "  Contains: All SECURITY groups with Full Control permissions" -ForegroundColor Gray
+
+# 2. All Security Group Members
+$SecurityGroupMembers | Export-Csv -Path "$OutputPath\2_Security_Group_Members_$Timestamp.csv" -NoTypeInformation
+Write-Host "✓ 2_Security_Group_Members_$Timestamp.csv" -ForegroundColor Green
+Write-Host "  Contains: All members of SECURITY groups with email addresses" -ForegroundColor Gray
+
+# 3. Full Control Details
+$FullControlList | Export-Csv -Path "$OutputPath\3_Full_Control_Details_$Timestamp.csv" -NoTypeInformation
+Write-Host "✓ 3_Full_Control_Details_$Timestamp.csv" -ForegroundColor Green
+Write-Host "  Contains: Who has Full Control on each SECURITY group" -ForegroundColor Gray
+
+# 4. Combined View - Security Groups with Members (one row per member)
+$CombinedView = foreach ($GroupInfo in $SecurityGroupSummary) {
+    $GroupName = $GroupInfo.SecurityGroupName
+    $Members = $SecurityGroupMembers | Where-Object { $_.SecurityGroupName -eq $GroupName }
+    
+    if ($Members) {
+        foreach ($Member in $Members) {
+            [PSCustomObject]@{
+                SecurityGroupName = $GroupInfo.SecurityGroupName
+                GroupDescription = $GroupInfo.Description
+                GroupScope = $GroupInfo.GroupScope
+                FullControlBy = $GroupInfo.FullControlPermissions
+                ManagedBy = $GroupInfo.ManagedBy
+                ManagedByEmail = $GroupInfo.ManagedByEmail
+                MembershipType = $Member.MembershipType
+                MemberUsername = $Member.MemberUsername
+                MemberName = $Member.MemberName
+                MemberEmail = $Member.MemberEmail
+                MemberTitle = $Member.MemberTitle
+                MemberDepartment = $Member.MemberDepartment
+                MemberType = $Member.MemberType
+                MemberEnabled = $Member.MemberEnabled
+            }
+        }
+    } else {
+        # Group has no members
+        [PSCustomObject]@{
+            SecurityGroupName = $GroupInfo.SecurityGroupName
+            GroupDescription = $GroupInfo.Description
+            GroupScope = $GroupInfo.GroupScope
+            FullControlBy = $GroupInfo.FullControlPermissions
+            ManagedBy = $GroupInfo.ManagedBy
+            ManagedByEmail = $GroupInfo.ManagedByEmail
+            MembershipType = ""
+            MemberUsername = "(No Members)"
+            MemberName = ""
+            MemberEmail = ""
+            MemberTitle = ""
+            MemberDepartment = ""
+            MemberType = ""
+            MemberEnabled = $null
+        }
+    }
+}
+
+$CombinedView | Export-Csv -Path "$OutputPath\4_Combined_Security_Groups_Members_$Timestamp.csv" -NoTypeInformation
+Write-Host "✓ 4_Combined_Security_Groups_Members_$Timestamp.csv" -ForegroundColor Green
+Write-Host "  Contains: MASTER FILE - All security groups + members + permissions" -ForegroundColor Gray
+
+# 5. Users ONLY with Email Addresses (no nested groups)
+$UsersOnly = $SecurityGroupMembers | 
+    Where-Object { $_.MemberType -eq "user" } |
+    Select-Object SecurityGroupName, MemberUsername, MemberName, MemberEmail, MemberTitle, MemberDepartment, MemberEnabled, MembershipType |
+    Sort-Object MemberName
+
+$UsersOnly | Export-Csv -Path "$OutputPath\5_Users_In_Security_Groups_$Timestamp.csv" -NoTypeInformation
+Write-Host "✓ 5_Users_In_Security_Groups_$Timestamp.csv" -ForegroundColor Green
+Write-Host "  Contains: Users ONLY (no groups) with their email addresses" -ForegroundColor Gray
+
+# 6. Unique Users List
+$UniqueUsers = $SecurityGroupMembers | 
+    Where-Object { $_.MemberType -eq "user" } |
+    Select-Object MemberUsername, MemberName, MemberEmail, MemberTitle, MemberDepartment, MemberEnabled -Unique |
+    Sort-Object MemberName
+
+$UniqueUsers | Export-Csv -Path "$OutputPath\6_Unique_Users_List_$Timestamp.csv" -NoTypeInformation
+Write-Host "✓ 6_Unique_Users_List_$Timestamp.csv" -ForegroundColor Green
+Write-Host "  Contains: Unique list of users across all security groups" -ForegroundColor Gray
+
+# 7. Security Groups with Custom Full Control (non-default)
+$CustomPermissions = $SecurityGroupSummary | Where-Object {
+    $_.FullControlPermissions -and 
+    $_.FullControlPermissions -notmatch "BUILTIN\\Administrators" -and
+    $_.FullControlPermissions -notmatch "NT AUTHORITY\\SYSTEM" -and
+    $_.FullControlPermissions -notmatch "Domain Admins" -and
+    $_.FullControlPermissions -ne "" -and
+    $_.FullControlPermissions -ne "ERROR: Could not retrieve"
+}
+
+if ($CustomPermissions) {
+    $CustomPermissions | Export-Csv -Path "$OutputPath\7_Custom_Permissions_$Timestamp.csv" -NoTypeInformation
+    Write-Host "✓ 7_Custom_Permissions_$Timestamp.csv" -ForegroundColor Green
+    Write-Host "  Contains: Security groups with non-default Full Control (REVIEW!)" -ForegroundColor Yellow
+}
+
+# 8. Security Groups by Scope
+foreach ($Scope in @("Global", "DomainLocal", "Universal")) {
+    $ScopeGroups = $SecurityGroupSummary | Where-Object { $_.GroupScope -eq $Scope }
+    if ($ScopeGroups) {
+        $ScopeGroups | Export-Csv -Path "$OutputPath\8_SecurityGroups_$Scope`_$Timestamp.csv" -NoTypeInformation
+        Write-Host "✓ 8_SecurityGroups_$Scope`_$Timestamp.csv" -ForegroundColor Green
+    }
+}
+
+# Generate Statistics
+Write-Host ""
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "Statistics" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host ""
+
+$TotalSecurityGroups = $SecurityGroupSummary.Count
+$GlobalGroups = ($SecurityGroupSummary | Where-Object { $_.GroupScope -eq "Global" }).Count
+$DomainLocalGroups = ($SecurityGroupSummary | Where-Object { $_.GroupScope -eq "DomainLocal" }).Count
+$UniversalGroups = ($SecurityGroupSummary | Where-Object { $_.GroupScope -eq "Universal" }).Count
+$TotalMemberships = $SecurityGroupMembers.Count
+$TotalUsers = ($SecurityGroupMembers | Where-Object { $_.MemberType -eq "user" }).Count
+$UniqueUserCount = ($UniqueUsers | Measure-Object).Count
+$UsersWithEmail = ($SecurityGroupMembers | Where-Object { $_.MemberEmail }).Count
+$GroupsWithCustomPerms = ($CustomPermissions | Measure-Object).Count
+
+Write-Host "Security Groups:" -ForegroundColor Yellow
+Write-Host "  Total Security Groups: $TotalSecurityGroups" -ForegroundColor White
+Write-Host "  Global: $GlobalGroups" -ForegroundColor White
+Write-Host "  Domain Local: $DomainLocalGroups" -ForegroundColor White
+Write-Host "  Universal: $UniversalGroups" -ForegroundColor White
+Write-Host "  Groups with Custom Permissions: $GroupsWithCustomPerms" -ForegroundColor $(if($GroupsWithCustomPerms -gt 0){"Yellow"}else{"White"})
+Write-Host ""
+
+Write-Host "Members:" -ForegroundColor Yellow
+Write-Host "  Total Memberships: $TotalMemberships" -ForegroundColor White
+Write-Host "  User Memberships: $TotalUsers" -ForegroundColor White
+Write-Host "  Unique Users: $UniqueUserCount" -ForegroundColor White
+Write-Host "  Users with Email: $UsersWithEmail" -ForegroundColor White
+Write-Host ""
+
+# Top 10 largest security groups
+Write-Host "Top 10 Largest Security Groups:" -ForegroundColor Cyan
+$SecurityGroupSummary | 
+    Sort-Object RecursiveMemberCount -Descending | 
+    Select-Object -First 10 SecurityGroupName, GroupScope, RecursiveMemberCount |
+    Format-Table -AutoSize
+
+# Top identities with Full Control
+Write-Host "Top Identities with Full Control on Security Groups:" -ForegroundColor Cyan
+$FullControlList | 
+    Group-Object IdentityWithFullControl | 
+    Select-Object @{Name="Identity";Expression={$_.Name}}, Count |
+    Sort-Object Count -Descending |
+    Select-Object -First 10 |
+    Format-Table -AutoSize
+
+# Users without email
+$UsersNoEmail = ($SecurityGroupMembers | Where-Object { $_.MemberType -eq "user" -and -not $_.MemberEmail } | Select-Object MemberUsername -Unique).Count
+if ($UsersNoEmail -gt 0) {
+    Write-Host "⚠ WARNING: $UsersNoEmail users found without email addresses" -ForegroundColor Yellow
+}
+
+# Create Summary Report
+$Report = @"
+========================================
+SECURITY GROUPS COMPLETE EXPORT REPORT
+========================================
+Generated: $(Get-Date)
+Domain: $((Get-ADDomain).DNSRoot)
+
+SUMMARY
+-------
+Total SECURITY Groups: $TotalSecurityGroups
+  - Global: $GlobalGroups
+  - Domain Local: $DomainLocalGroups
+  - Universal: $UniversalGroups
+  
+Groups with Custom Full Control: $GroupsWithCustomPerms
+
+Total Memberships: $TotalMemberships
+User Memberships: $TotalUsers
+Unique Users: $UniqueUserCount
+Users with Email: $UsersWithEmail
+Users WITHOUT Email: $UsersNoEmail
+
+TOP 10 LARGEST SECURITY GROUPS
+-------------------------------
+$(($SecurityGroupSummary | Sort-Object RecursiveMemberCount -Descending | Select-Object -First 10 | ForEach-Object { "$($_.SecurityGroupName) [$($_.GroupScope)]: $($_.RecursiveMemberCount) members" }) -join "`n")
+
+TOP IDENTITIES WITH FULL CONTROL
+---------------------------------
+$(($FullControlList | Group-Object IdentityWithFullControl | Select-Object @{Name="Identity";Expression={$_.Name}}, Count | Sort-Object Count -Descending | Select-Object -First 10 | ForEach-Object { "$($_.Identity): $($_.Count) groups" }) -join "`n")
+
+FILES GENERATED
+---------------
+1. 1_Security_Groups_Summary_$Timestamp.csv
+   - All SECURITY groups with Full Control permissions summary
+   
+2. 2_Security_Group_Members_$Timestamp.csv
+   - All members of SECURITY groups (direct & nested)
+   
+3. 3_Full_Control_Details_$Timestamp.csv
+   - Who has Full Control on each SECURITY group
+   
+4. 4_Combined_Security_Groups_Members_$Timestamp.csv
+   - MASTER FILE: All groups + members + permissions in one
+   
+5. 5_Users_In_Security_Groups_$Timestamp.csv
+   - Users ONLY (no nested groups)
+   
+6. 6_Unique_Users_List_$Timestamp.csv
+   - Unique list of all users found
+   
+7. 7_Custom_Permissions_$Timestamp.csv
+   - Groups with non-default Full Control (REVIEW THESE!)
+   
+8. 8_SecurityGroups_[Scope]_$Timestamp.csv
+   - Groups separated by scope (Global/DomainLocal/Universal)
+
+OUTPUT LOCATION
+---------------
+$OutputPath
+
+NOTES
+-----
+- Only SECURITY groups are included (Distribution groups excluded)
+- Member count includes nested group members (recursive)
+- Direct vs Nested membership is indicated in MembershipType column
+- Review file #7 (Custom Permissions) for security audit
+
+========================================
+"@
+
+$Report | Out-File -FilePath "$OutputPath\Report_$Timestamp.txt"
+Write-Host ""
+Write-Host $Report
+Write-Host ""
+Write-Host "========================================" -ForegroundColor Green
+Write-Host "Export Complete!" -ForegroundColor Green
+Write-Host "========================================" -ForegroundColor Green
+Write-Host ""
+Write-Host "All files saved to: $OutputPath" -ForegroundColor Cyan
+Write-Host ""
+
+# Optional: Open folder
+$OpenFolder = Read-Host "Open output folder? (Y/N)"
+if ($OpenFolder -eq "Y" -or $OpenFolder -eq "y") {
+    explorer $OutputPath
+}
