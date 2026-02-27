@@ -17,3 +17,7 @@ cd C:\Scripts
 Quick Admin Check script:
 # Quick list of Domain Admins only
 .\Quick_Admin_Check.ps1
+
+
+
+https://claude.ai/public/artifacts/b97bb325-0187-4d16-ac7a-82861632e7d9
