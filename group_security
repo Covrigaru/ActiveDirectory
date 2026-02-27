@@ -1,0 +1,237 @@
+# Export All AD Groups with Full Control Permissions
+# Windows Server 2016 Compatible
+# Lists who has Full Control over each group
+
+#Requires -Modules ActiveDirectory
+
+# Configuration
+$OutputPath = "C:\Temp\AD_Groups_Security"
+$Timestamp = Get-Date -Format "yyyy-MM-dd_HHmmss"
+
+# Create output directory
+if (-not (Test-Path $OutputPath)) {
+    New-Item -Path $OutputPath -ItemType Directory -Force | Out-Null
+}
+
+Write-Host ""
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "AD Groups with Security Permissions" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host ""
+
+# Get all groups
+Write-Host "Retrieving all groups..." -ForegroundColor Yellow
+$AllGroups = Get-ADGroup -Filter * -Properties *
+
+Write-Host "Found $($AllGroups.Count) groups" -ForegroundColor Green
+Write-Host ""
+
+# Process each group
+$Results = @()
+$Counter = 0
+
+foreach ($Group in $AllGroups) {
+    $Counter++
+    Write-Progress -Activity "Processing Groups" -Status "Group $Counter of $($AllGroups.Count): $($Group.Name)" -PercentComplete (($Counter / $AllGroups.Count) * 100)
+    
+    # Get ACL for the group
+    try {
+        $ACL = Get-Acl -Path "AD:\$($Group.DistinguishedName)"
+        
+        # Find who has Full Control
+        $FullControlUsers = @()
+        
+        foreach ($Access in $ACL.Access) {
+            # Check for Full Control (GenericAll)
+            if ($Access.ActiveDirectoryRights -match "GenericAll" -and $Access.AccessControlType -eq "Allow") {
+                $Identity = $Access.IdentityReference.Value
+                
+                # Try to resolve to friendly name
+                try {
+                    if ($Identity -match "S-1-5-21") {
+                        # It's a SID, try to resolve
+                        $ResolvedIdentity = (New-Object System.Security.Principal.SecurityIdentifier($Identity)).Translate([System.Security.Principal.NTAccount]).Value
+                    } else {
+                        $ResolvedIdentity = $Identity
+                    }
+                } catch {
+                    $ResolvedIdentity = $Identity
+                }
+                
+                $FullControlUsers += $ResolvedIdentity
+            }
+        }
+        
+        # Get group members count
+        $MemberCount = (Get-ADGroupMember -Identity $Group.DistinguishedName -ErrorAction SilentlyContinue | Measure-Object).Count
+        
+        # Get managed by name
+        $ManagedByName = ""
+        if ($Group.ManagedBy) {
+            try {
+                $ManagedByObj = Get-ADObject $Group.ManagedBy -Properties Name
+                $ManagedByName = $ManagedByObj.Name
+            } catch {
+                $ManagedByName = $Group.ManagedBy
+            }
+        }
+        
+        # Create result object
+        $Results += [PSCustomObject]@{
+            GroupName = $Group.Name
+            Description = $Group.Description
+            GroupCategory = $Group.GroupCategory
+            GroupScope = $Group.GroupScope
+            MemberCount = $MemberCount
+            ManagedBy = $ManagedByName
+            FullControlPermissions = ($FullControlUsers -join "; ")
+            FullControlCount = $FullControlUsers.Count
+            whenCreated = $Group.whenCreated
+            whenChanged = $Group.whenChanged
+            DistinguishedName = $Group.DistinguishedName
+            CanonicalName = $Group.CanonicalName
+            ObjectGUID = $Group.ObjectGUID
+            SID = $Group.SID
+            ProtectedFromAccidentalDeletion = $Group.ProtectedFromAccidentalDeletion
+        }
+        
+    } catch {
+        Write-Host "  Error processing group: $($Group.Name)" -ForegroundColor Red
+        
+        # Add with error note
+        $Results += [PSCustomObject]@{
+            GroupName = $Group.Name
+            Description = $Group.Description
+            GroupCategory = $Group.GroupCategory
+            GroupScope = $Group.GroupScope
+            MemberCount = 0
+            ManagedBy = ""
+            FullControlPermissions = "ERROR: Could not retrieve ACL"
+            FullControlCount = 0
+            whenCreated = $Group.whenCreated
+            whenChanged = $Group.whenChanged
+            DistinguishedName = $Group.DistinguishedName
+            CanonicalName = $Group.CanonicalName
+            ObjectGUID = $Group.ObjectGUID
+            SID = $Group.SID
+            ProtectedFromAccidentalDeletion = $null
+        }
+    }
+}
+
+Write-Progress -Activity "Processing Groups" -Completed
+
+# Export results
+Write-Host ""
+Write-Host "Exporting results..." -ForegroundColor Cyan
+
+# Main export - all groups with permissions
+$Results | Export-Csv -Path "$OutputPath\Groups_With_Permissions_$Timestamp.csv" -NoTypeInformation
+Write-Host "✓ Exported all groups: Groups_With_Permissions_$Timestamp.csv" -ForegroundColor Green
+
+# Export groups with Full Control granted to non-default users
+$NonDefaultPermissions = $Results | Where-Object {
+    $_.FullControlPermissions -and 
+    $_.FullControlPermissions -notmatch "BUILTIN\\Administrators" -and
+    $_.FullControlPermissions -notmatch "NT AUTHORITY\\SYSTEM" -and
+    $_.FullControlPermissions -ne ""
+}
+
+if ($NonDefaultPermissions) {
+    $NonDefaultPermissions | Export-Csv -Path "$OutputPath\Groups_Custom_Permissions_$Timestamp.csv" -NoTypeInformation
+    Write-Host "✓ Exported groups with custom permissions: Groups_Custom_Permissions_$Timestamp.csv" -ForegroundColor Green
+}
+
+# Export summary by permission
+$PermissionSummary = $Results | 
+    Where-Object {$_.FullControlPermissions} |
+    ForEach-Object {
+        $group = $_
+        if ($_.FullControlPermissions -ne "ERROR: Could not retrieve ACL") {
+            $_.FullControlPermissions -split "; " | ForEach-Object {
+                [PSCustomObject]@{
+                    Permission = $_
+                    GroupName = $group.GroupName
+                    GroupCategory = $group.GroupCategory
+                    GroupScope = $group.GroupScope
+                }
+            }
+        }
+    } | 
+    Group-Object Permission | 
+    Select-Object @{Name="Identity";Expression={$_.Name}}, Count, @{Name="Groups";Expression={($_.Group.GroupName -join "; ")}}
+
+$PermissionSummary | Export-Csv -Path "$OutputPath\Permission_Summary_$Timestamp.csv" -NoTypeInformation
+Write-Host "✓ Exported permission summary: Permission_Summary_$Timestamp.csv" -ForegroundColor Green
+
+# Generate statistics
+Write-Host ""
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "Statistics" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
+
+$TotalGroups = $Results.Count
+$SecurityGroups = ($Results | Where-Object {$_.GroupCategory -eq "Security"}).Count
+$DistributionGroups = ($Results | Where-Object {$_.GroupCategory -eq "Distribution"}).Count
+$GroupsWithCustomPerms = ($NonDefaultPermissions | Measure-Object).Count
+
+Write-Host "Total Groups: $TotalGroups" -ForegroundColor Yellow
+Write-Host "  Security Groups: $SecurityGroups" -ForegroundColor Green
+Write-Host "  Distribution Groups: $DistributionGroups" -ForegroundColor Green
+Write-Host ""
+Write-Host "Groups with Custom Full Control: $GroupsWithCustomPerms" -ForegroundColor Yellow
+Write-Host ""
+
+# Show top users with Full Control permissions
+Write-Host "Top 10 Users/Groups with Full Control Permissions:" -ForegroundColor Cyan
+$PermissionSummary | 
+    Sort-Object Count -Descending | 
+    Select-Object -First 10 Identity, Count |
+    Format-Table -AutoSize
+
+# Create detailed report
+$Report = @"
+========================================
+AD GROUPS SECURITY PERMISSIONS REPORT
+========================================
+Generated: $(Get-Date)
+Domain: $((Get-ADDomain).DNSRoot)
+
+SUMMARY
+-------
+Total Groups: $TotalGroups
+Security Groups: $SecurityGroups
+Distribution Groups: $DistributionGroups
+
+Groups with Custom Full Control: $GroupsWithCustomPerms
+
+TOP IDENTITIES WITH FULL CONTROL
+---------------------------------
+$(($PermissionSummary | Sort-Object Count -Descending | Select-Object -First 15 | ForEach-Object {"$($_.Identity): $($_.Count) groups"}) -join "`n")
+
+FILES GENERATED
+---------------
+- Groups_With_Permissions_$Timestamp.csv (All groups with permissions)
+- Groups_Custom_Permissions_$Timestamp.csv (Groups with custom permissions)
+- Permission_Summary_$Timestamp.csv (Summary by identity)
+- Report_$Timestamp.txt (This report)
+
+OUTPUT LOCATION
+---------------
+$OutputPath
+
+========================================
+"@
+
+$Report | Out-File -FilePath "$OutputPath\Report_$Timestamp.txt"
+
+Write-Host $Report
+Write-Host ""
+Write-Host "All files saved to: $OutputPath" -ForegroundColor Cyan
+Write-Host ""
+
+# Optional: Open folder
+$OpenFolder = Read-Host "Open output folder? (Y/N)"
+if ($OpenFolder -eq "Y" -or $OpenFolder -eq "y") {
+    explorer $OutputPath
+}
