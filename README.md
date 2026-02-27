@@ -20,4 +20,4 @@ Quick Admin Check script:
 
 
 
-https://claude.ai/public/artifacts/b97bb325-0187-4d16-ac7a-82861632e7d9
+https://claude.ai/public/artifacts/0db201b7-307b-4b79-adef-71cff8e85dc1
