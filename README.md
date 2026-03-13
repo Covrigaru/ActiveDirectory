@@ -6,7 +6,7 @@ Prerequisites:
 3. The user must have Network connectivity to the domain controller, permission/firewall/etc.
 
 
-updated: 1. user registration form 
+updated: 1. web_form 
 
 Full Audit (Recommended) script:
 # Open PowerShell as Administrator
