@@ -1,3 +1,7 @@
+#######
+# get a list of all printers 
+#######
+
 Get-ADObject -Filter {objectClass -eq "printQueue"} -Properties printerName, serverName, location, driverName, portName, uNCName | 
     Select-Object `
         Name,
