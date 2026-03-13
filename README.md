@@ -7,6 +7,7 @@ Prerequisites:
 
 
 updated: 1. web_form 
+         2. printer
 
 Full Audit (Recommended) script:
 # Open PowerShell as Administrator
