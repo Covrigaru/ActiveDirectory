@@ -1,0 +1,439 @@
+
+
+
+
+#Requires -Module ActiveDirectory
+<#
+.SYNOPSIS
+    Exports all Active Directory users created in the past 30 days with full attributes.
+
+.DESCRIPTION
+    Queries Active Directory for user accounts whose whenCreated date falls within
+    the last 30 days. Exports results to both a CSV and a formatted HTML report.
+    Compatible with Windows Server 2016 / AD DS.
+
+.NOTES
+    Run on a Domain Controller or any machine with RSAT AD tools installed.
+    Requires read access to Active Directory.
+
+.OUTPUTS
+    AD_NewUsers_<date>.csv
+    AD_NewUsers_<date>.html
+#>
+
+# ── Configuration ─────────────────────────────────────────────────────────────
+
+$DaysBack    = 30
+$OutputDir   = "C:\temp"
+$DateStamp   = Get-Date -Format "yyyy-MM-dd"
+$CSVPath     = Join-Path $OutputDir "AD_NewUsers_$DateStamp.csv"
+$HTMLPath    = Join-Path $OutputDir "AD_NewUsers_$DateStamp.html"
+$SearchBase  = "DC=nrn,DC=nrcan,DC=gc,DC=ca"   # <-- update to your domain
+$Server      = "nrbcv8lwvdcp001.nrn.nrcan.gc.ca" # <-- update to your DC
+
+# ── Setup ─────────────────────────────────────────────────────────────────────
+
+if (-not (Test-Path $OutputDir)) {
+    New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
+    Write-Host "Created output directory: $OutputDir" -ForegroundColor Cyan
+}
+
+$CutoffDate = (Get-Date).AddDays(-$DaysBack)
+
+Write-Host ""
+Write-Host "=================================================" -ForegroundColor Cyan
+Write-Host "  AD New User Report — Last $DaysBack Days"         -ForegroundColor Cyan
+Write-Host "  Domain  : $SearchBase"                            -ForegroundColor Cyan
+Write-Host "  Server  : $Server"                                -ForegroundColor Cyan
+Write-Host "  Since   : $($CutoffDate.ToString('yyyy-MM-dd'))"  -ForegroundColor Cyan
+Write-Host "=================================================" -ForegroundColor Cyan
+Write-Host ""
+
+# ── Attributes to retrieve ────────────────────────────────────────────────────
+# All standard AD user attributes available in Windows Server 2016
+
+$Properties = @(
+    # Identity
+    "DisplayName",
+    "GivenName",
+    "Initials",
+    "Surname",
+    "Name",
+    "CN",
+    "Description",
+
+    # Creator (replication metadata)
+    "nTSecurityDescriptor",
+
+    # Account
+    "SamAccountName",
+    "UserPrincipalName",
+    "DistinguishedName",
+    "whenCreated",
+    "whenChanged",
+    "LastLogonDate",
+    "LastLogonTimestamp",
+    "BadLogonCount",
+    "BadPwdCount",
+    "PasswordLastSet",
+    "PasswordNeverExpires",
+    "PasswordNotRequired",
+    "PasswordExpired",
+    "CannotChangePassword",
+    "AccountExpirationDate",
+    "AccountNotDelegated",
+    "Enabled",
+    "LockedOut",
+    "SmartcardLogonRequired",
+    "UserAccountControl",
+    "LogonWorkstations",
+    "ScriptPath",
+    "HomeDrive",
+    "HomeDirectory",
+    "ProfilePath",
+
+    # Organisation
+    "Title",
+    "Department",
+    "Company",
+    "Division",
+    "Manager",
+    "EmployeeID",
+    "EmployeeNumber",
+    "EmployeeType",
+
+    # Contact
+    "EmailAddress",
+    "OfficePhone",
+    "MobilePhone",
+    "Fax",
+    "ipPhone",
+    "HomePage",
+    "StreetAddress",
+    "City",
+    "State",
+    "PostalCode",
+    "Country",
+    "co",
+    "Office",
+
+    # Security & Kerberos
+    "TrustedForDelegation",
+    "TrustedToAuthForDelegation",
+    "DoesNotRequirePreAuth",
+    "UseDESKeyOnly",
+    "KerberosEncryptionType",
+    "PrimaryGroup",
+    "PrimaryGroupID",
+    "SID",
+    "ObjectGUID",
+    "ObjectClass",
+
+    # Group membership
+    "MemberOf",
+
+    # Additional / Extension attributes
+    "ExtensionAttribute1",
+    "ExtensionAttribute2",
+    "ExtensionAttribute3",
+    "ExtensionAttribute4",
+    "ExtensionAttribute5",
+    "ExtensionAttribute6",
+    "ExtensionAttribute7",
+    "ExtensionAttribute8",
+    "ExtensionAttribute9",
+    "ExtensionAttribute10",
+    "ExtensionAttribute11",
+    "ExtensionAttribute12",
+    "ExtensionAttribute13",
+    "ExtensionAttribute14",
+    "ExtensionAttribute15",
+
+    # Metadata
+    "CanonicalName",
+    "Created",
+    "Modified",
+    "ProtectedFromAccidentalDeletion"
+)
+
+# ── Query Active Directory ────────────────────────────────────────────────────
+
+Write-Host "Querying Active Directory..." -ForegroundColor Yellow
+
+try {
+    $Users = Get-ADUser `
+        -Server     $Server `
+        -SearchBase $SearchBase `
+        -Filter     { whenCreated -ge $CutoffDate } `
+        -Properties $Properties `
+        -ErrorAction Stop
+
+    Write-Host "Found $($Users.Count) user(s) created since $($CutoffDate.ToString('yyyy-MM-dd'))." `
+        -ForegroundColor Green
+} catch {
+    Write-Error "Failed to query Active Directory: $_"
+    exit 1
+}
+
+if ($Users.Count -eq 0) {
+    Write-Host "No users found in the last $DaysBack days. Exiting." -ForegroundColor Yellow
+    exit 0
+}
+
+# ── Build export objects ──────────────────────────────────────────────────────
+
+Write-Host "Processing user attributes..." -ForegroundColor Yellow
+
+$ExportData = foreach ($User in $Users) {
+
+    # Flatten MemberOf to a readable string
+    $Groups = if ($User.MemberOf) {
+        ($User.MemberOf | ForEach-Object {
+            ($_ -split ',')[0] -replace '^CN=',''
+        }) -join " | "
+    } else { "" }
+
+    # Resolve who created this user via replication metadata
+    $CreatedBy = ""
+    try {
+        $Metadata = Get-ADReplicationAttributeMetadata `
+            -Object $User.DistinguishedName `
+            -Server $Server `
+            -Properties "objectClass" `
+            -ErrorAction Stop
+        $Entry = $Metadata | Where-Object { $_.AttributeName -eq "objectClass" }
+        if ($Entry) {
+            $CreatedBy = $Entry.LastOriginatingChangeDirectoryServerIdentity
+            # Try to resolve to a friendly sAMAccountName if it looks like a DN
+            if ($CreatedBy -match "^CN=") {
+                try {
+                    $CreatorUser = Get-ADUser -Identity $CreatedBy -Server $Server `
+                        -Properties DisplayName -ErrorAction Stop
+                    $CreatedBy = if ($CreatorUser.DisplayName) {
+                        "$($CreatorUser.DisplayName) ($($CreatorUser.SamAccountName))"
+                    } else { $CreatorUser.SamAccountName }
+                } catch {
+                    # Leave as the raw DN / server identity if resolution fails
+                }
+            }
+        }
+    } catch {
+        $CreatedBy = "Unable to retrieve"
+    }
+
+    # Decode UserAccountControl flags
+    $UAC = $User.UserAccountControl
+    $UACFlags = @()
+    if ($UAC -band 0x0002)    { $UACFlags += "ACCOUNTDISABLE" }
+    if ($UAC -band 0x0010)    { $UACFlags += "LOCKOUT" }
+    if ($UAC -band 0x0020)    { $UACFlags += "PASSWD_NOTREQD" }
+    if ($UAC -band 0x0040)    { $UACFlags += "PASSWD_CANT_CHANGE" }
+    if ($UAC -band 0x10000)   { $UACFlags += "DONT_EXPIRE_PASSWD" }
+    if ($UAC -band 0x40000)   { $UACFlags += "SMARTCARD_REQUIRED" }
+    if ($UAC -band 0x80000)   { $UACFlags += "TRUSTED_FOR_DELEGATION" }
+    if ($UAC -band 0x100000)  { $UACFlags += "NOT_DELEGATED" }
+    if ($UAC -band 0x200000)  { $UACFlags += "USE_DES_KEY_ONLY" }
+    if ($UAC -band 0x400000)  { $UACFlags += "DONT_REQ_PREAUTH" }
+    if ($UAC -band 0x800000)  { $UACFlags += "PASSWORD_EXPIRED" }
+    if ($UAC -band 0x1000000) { $UACFlags += "TRUSTED_TO_AUTH_FOR_DELEGATION" }
+    $UACDecoded = if ($UACFlags.Count -gt 0) { $UACFlags -join " | " } else { "NORMAL_ACCOUNT" }
+
+    [PSCustomObject]@{
+        # ── Identity
+        "Display Name"              = $User.DisplayName
+        "First Name"                = $User.GivenName
+        "Initials"                  = $User.Initials
+        "Last Name"                 = $User.Surname
+        "Full Name (CN)"            = $User.CN
+        "Description"               = $User.Description
+        "Created By"                = $CreatedBy
+
+        # ── Account
+        "sAMAccountName"            = $User.SamAccountName
+        "UPN"                       = $User.UserPrincipalName
+        "Distinguished Name"        = $User.DistinguishedName
+        "Canonical Name"            = $User.CanonicalName
+        "Account Enabled"           = $User.Enabled
+        "Account Locked"            = $User.LockedOut
+        "When Created"              = $User.whenCreated
+        "When Changed"              = $User.whenChanged
+        "Last Logon Date"           = $User.LastLogonDate
+        "Password Last Set"         = $User.PasswordLastSet
+        "Password Never Expires"    = $User.PasswordNeverExpires
+        "Password Not Required"     = $User.PasswordNotRequired
+        "Password Expired"          = $User.PasswordExpired
+        "Cannot Change Password"    = $User.CannotChangePassword
+        "Account Expiration Date"   = $User.AccountExpirationDate
+        "Smart Card Required"       = $User.SmartcardLogonRequired
+        "UserAccountControl (raw)"  = $UAC
+        "UserAccountControl (flags)"= $UACDecoded
+        "Logon Script"              = $User.ScriptPath
+        "Home Drive"                = $User.HomeDrive
+        "Home Directory"            = $User.HomeDirectory
+        "Profile Path"              = $User.ProfilePath
+        "Logon Workstations"        = $User.LogonWorkstations
+        "Object GUID"               = $User.ObjectGUID
+        "SID"                       = $User.SID
+
+        # ── Organisation
+        "Job Title"                 = $User.Title
+        "Department"                = $User.Department
+        "Company"                   = $User.Company
+        "Division"                  = $User.Division
+        "Manager"                   = $User.Manager
+        "Employee ID"               = $User.EmployeeID
+        "Employee Number"           = $User.EmployeeNumber
+        "Employee Type"             = $User.EmployeeType
+
+        # ── Contact
+        "Email"                     = $User.EmailAddress
+        "Office Phone"              = $User.OfficePhone
+        "Mobile"                    = $User.MobilePhone
+        "Fax"                       = $User.Fax
+        "IP Phone"                  = $User.ipPhone
+        "Web Page"                  = $User.HomePage
+        "Office"                    = $User.Office
+        "Street Address"            = $User.StreetAddress
+        "City"                      = $User.City
+        "State / Province"          = $User.State
+        "Postal Code"               = $User.PostalCode
+        "Country Code"              = $User.Country
+        "Country Name"              = $User.co
+
+        # ── Security & Kerberos
+        "Trusted for Delegation"            = $User.TrustedForDelegation
+        "Trusted to Auth for Delegation"    = $User.TrustedToAuthForDelegation
+        "Does Not Require Pre-Auth"         = $User.DoesNotRequirePreAuth
+        "Use DES Key Only"                  = $User.UseDESKeyOnly
+        "Kerberos Encryption Type"          = $User.KerberosEncryptionType
+        "Account Not Delegated"             = $User.AccountNotDelegated
+        "Primary Group"                     = $User.PrimaryGroup
+        "Protected From Accidental Deletion"= $User.ProtectedFromAccidentalDeletion
+
+        # ── Group membership
+        "Member Of"                 = $Groups
+
+        # ── Extension attributes
+        "extensionAttribute1"       = $User.ExtensionAttribute1
+        "extensionAttribute2"       = $User.ExtensionAttribute2
+        "extensionAttribute3"       = $User.ExtensionAttribute3
+        "extensionAttribute4"       = $User.ExtensionAttribute4
+        "extensionAttribute5"       = $User.ExtensionAttribute5
+        "extensionAttribute6"       = $User.ExtensionAttribute6
+        "extensionAttribute7"       = $User.ExtensionAttribute7
+        "extensionAttribute8"       = $User.ExtensionAttribute8
+        "extensionAttribute9"       = $User.ExtensionAttribute9
+        "extensionAttribute10"      = $User.ExtensionAttribute10
+        "extensionAttribute11"      = $User.ExtensionAttribute11
+        "extensionAttribute12"      = $User.ExtensionAttribute12
+        "extensionAttribute13"      = $User.ExtensionAttribute13
+        "extensionAttribute14"      = $User.ExtensionAttribute14
+        "extensionAttribute15"      = $User.ExtensionAttribute15
+    }
+}
+
+# ── Export CSV ────────────────────────────────────────────────────────────────
+
+Write-Host "Exporting CSV..." -ForegroundColor Yellow
+$ExportData | Export-Csv -Path $CSVPath -NoTypeInformation -Encoding UTF8
+Write-Host "  CSV saved: $CSVPath" -ForegroundColor Green
+
+# ── Export HTML ───────────────────────────────────────────────────────────────
+
+Write-Host "Generating HTML report..." -ForegroundColor Yellow
+
+$TableRows = foreach ($Row in $ExportData) {
+    $EnabledColor = if ($Row."Account Enabled" -eq $true) { "#e6f4ea" } else { "#fce8e6" }
+    $EnabledText  = if ($Row."Account Enabled" -eq $true) { "Yes" } else { "No" }
+    "<tr style='background:$EnabledColor'>
+        <td>$($Row.'Display Name')</td>
+        <td>$($Row.'sAMAccountName')</td>
+        <td>$($Row.'UPN')</td>
+        <td>$($Row.'Job Title')</td>
+        <td>$($Row.'Department')</td>
+        <td>$($Row.'Company')</td>
+        <td>$($Row.'When Created')</td>
+        <td><strong>$($Row.'Created By')</strong></td>
+        <td>$($Row.'Last Logon Date')</td>
+        <td style='font-size:10px'>$($Row.'Distinguished Name')</td>
+        <td>$EnabledText</td>
+        <td style='font-size:10px'>$($Row.'Member Of')</td>
+    </tr>"
+}
+
+$HTMLContent = @"
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AD New Users Report — $DateStamp</title>
+<style>
+  body { font-family: system-ui, sans-serif; font-size: 12px; color: #1a1a1a; margin: 0; background: #f5f5f5; }
+  header { background: #185FA5; color: #fff; padding: 16px 24px; }
+  header h1 { font-size: 17px; margin: 0 0 3px; }
+  header p  { font-size: 11px; opacity: .8; margin: 0; }
+  .wrap { max-width: 1400px; margin: 20px auto; padding: 0 16px; }
+  .summary { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .stat { background: #fff; border: 1px solid #ddd; border-radius: 7px; padding: 12px 18px; min-width: 140px; }
+  .stat .val { font-size: 24px; font-weight: 700; color: #185FA5; }
+  .stat .lbl { font-size: 11px; color: #888; margin-top: 2px; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #ddd; border-radius: 7px; overflow: hidden; font-size: 11px; }
+  th { background: #185FA5; color: #fff; padding: 8px 10px; text-align: left; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  td { padding: 6px 10px; border-bottom: 1px solid #eee; vertical-align: top; }
+  tr:hover td { background: #f0f6ff !important; }
+  footer { margin: 16px 0; font-size: 10px; color: #aaa; text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Active Directory — New Users Report</h1>
+  <p>Domain: $SearchBase &nbsp;·&nbsp; Period: Last $DaysBack days &nbsp;·&nbsp; Generated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')</p>
+</header>
+<div class="wrap">
+  <div class="summary">
+    <div class="stat"><div class="val">$($ExportData.Count)</div><div class="lbl">Users created</div></div>
+    <div class="stat"><div class="val">$(($ExportData | Where-Object { $_.'Account Enabled' -eq $true }).Count)</div><div class="lbl">Enabled accounts</div></div>
+    <div class="stat"><div class="val">$(($ExportData | Where-Object { $_.'Account Enabled' -ne $true }).Count)</div><div class="lbl">Disabled accounts</div></div>
+    <div class="stat"><div class="val">$DaysBack</div><div class="lbl">Days lookback</div></div>
+    <div class="stat"><div class="val">$($CutoffDate.ToString('yyyy-MM-dd'))</div><div class="lbl">Since date</div></div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Display name</th>
+        <th>sAMAccountName</th>
+        <th>UPN</th>
+        <th>Job title</th>
+        <th>Department</th>
+        <th>Company</th>
+        <th>When created</th>
+        <th>Created by</th>
+        <th>Last logon</th>
+        <th>Distinguished name</th>
+        <th>Enabled</th>
+        <th>Member of</th>
+      </tr>
+    </thead>
+    <tbody>
+      $($TableRows -join "`n")
+    </tbody>
+  </table>
+  <footer>NRCan Active Directory — Confidential &nbsp;·&nbsp; $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')</footer>
+</div>
+</body>
+</html>
+"@
+
+$HTMLContent | Out-File -FilePath $HTMLPath -Encoding UTF8
+Write-Host "  HTML saved: $HTMLPath" -ForegroundColor Green
+
+# ── Summary ───────────────────────────────────────────────────────────────────
+
+Write-Host ""
+Write-Host "=================================================" -ForegroundColor Cyan
+Write-Host "  Done." -ForegroundColor Green
+Write-Host "  Users found  : $($ExportData.Count)"            -ForegroundColor White
+Write-Host "  CSV report   : $CSVPath"                         -ForegroundColor White
+Write-Host "  HTML report  : $HTMLPath"                        -ForegroundColor White
+Write-Host "=================================================" -ForegroundColor Cyan
+Write-Host ""
