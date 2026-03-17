@@ -6,8 +6,11 @@ Prerequisites:
 3. The user must have Network connectivity to the domain controller, permission/firewall/etc.
 
 
-updated: 1. web_form 
-         2. printer
+updated: 1. web_form - An HTML form for a new user registration 
+         2. printer - get a list of all printers
+         3. security_group_list_co - Lists security groups that have Full Control, and all members with email addresses
+         4. AD_User_info - Simple AD Users Export Script
+         
 
 Full Audit (Recommended) script:
 # Open PowerShell as Administrator
