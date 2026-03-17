@@ -20,7 +20,7 @@
 # ── Configuration ─────────────────────────────────────────────────────────────
 
 $DaysBack    = 30
-$OutputDir   = "C:\temp"
+$OutputDir   = "C:\temp\AD"
 $DateStamp   = Get-Date -Format "yyyy-MM-dd"
 $CSVPath     = Join-Path $OutputDir "AD_NewUsers_$DateStamp.csv"
 $HTMLPath    = Join-Path $OutputDir "AD_NewUsers_$DateStamp.html"
@@ -57,9 +57,6 @@ $Properties = @(
     "Name",
     "CN",
     "Description",
-
-    # Creator (replication metadata)
-    "nTSecurityDescriptor",
 
     # Account
     "SamAccountName",
@@ -189,34 +186,6 @@ $ExportData = foreach ($User in $Users) {
         }) -join " | "
     } else { "" }
 
-    # Resolve who created this user via replication metadata
-    $CreatedBy = ""
-    try {
-        $Metadata = Get-ADReplicationAttributeMetadata `
-            -Object $User.DistinguishedName `
-            -Server $Server `
-            -Properties "objectClass" `
-            -ErrorAction Stop
-        $Entry = $Metadata | Where-Object { $_.AttributeName -eq "objectClass" }
-        if ($Entry) {
-            $CreatedBy = $Entry.LastOriginatingChangeDirectoryServerIdentity
-            # Try to resolve to a friendly sAMAccountName if it looks like a DN
-            if ($CreatedBy -match "^CN=") {
-                try {
-                    $CreatorUser = Get-ADUser -Identity $CreatedBy -Server $Server `
-                        -Properties DisplayName -ErrorAction Stop
-                    $CreatedBy = if ($CreatorUser.DisplayName) {
-                        "$($CreatorUser.DisplayName) ($($CreatorUser.SamAccountName))"
-                    } else { $CreatorUser.SamAccountName }
-                } catch {
-                    # Leave as the raw DN / server identity if resolution fails
-                }
-            }
-        }
-    } catch {
-        $CreatedBy = "Unable to retrieve"
-    }
-
     # Decode UserAccountControl flags
     $UAC = $User.UserAccountControl
     $UACFlags = @()
@@ -242,7 +211,6 @@ $ExportData = foreach ($User in $Users) {
         "Last Name"                 = $User.Surname
         "Full Name (CN)"            = $User.CN
         "Description"               = $User.Description
-        "Created By"                = $CreatedBy
 
         # ── Account
         "sAMAccountName"            = $User.SamAccountName
