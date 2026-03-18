@@ -1,5 +1,5 @@
-# Check if specific user has admin rights
-# Usage: .\Check-UserAdminRights.ps1 -Username "john.doe"
+# Check if a specific user has admin rights
+# Show all group memberships
 
 #Requires -Modules ActiveDirectory
 
