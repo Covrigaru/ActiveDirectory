@@ -7,10 +7,11 @@ Prerequisites:
 
 
 updated: 1. web_form - An HTML form for a new user registration 
-         2. printer - get a list of all printers
-         3. security_group_list_co - Lists security groups that have Full Control, and all members with email addresses
-         4. AD_User_info - Simple AD Users Export Script
-         
+.        2. printer - get a list of all printers
+.        3. security_group_list_co - Lists security groups that have Full Control, and all members with email addresses
+.        4. AD_User_info - Simple AD Users Export Script
+.        5. AD_Admin_Audit.ps1 - Check if a specific user has admin rights
+.        6. Complete AD Resources Inventory - Server 2016 - Complete Active Directory Resources Inventory Script. 
 
 Full Audit (Recommended) script:
 # Open PowerShell as Administrator
