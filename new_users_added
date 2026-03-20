@@ -1,0 +1,16 @@
+# Get users created in the last 7 days
+$Date = (Get-Date).AddDays(-7)
+
+$NewUsers = Get-ADUser -Filter {whenCreated -ge $Date} -Properties whenCreated, Name, SamAccountName |
+Select-Object Name, SamAccountName, whenCreated
+
+# Export to Excel (CSV format for simplicity)
+$NewUsers | Export-Csv "C:\Reports\NewUsers_Last7Days.csv" -NoTypeInformation
+
+# Send email alert if new users exist
+if ($NewUsers.Count -gt 0) {
+    $Body = $NewUsers | Out-String
+    Send-MailMessage -To "admin@company.com" -From "ad-monitor@company.com" `
+    -Subject "New Active Directory Users (Last 7 Days)" `
+    -Body $Body -SmtpServer "smtp.company.com"
+}
