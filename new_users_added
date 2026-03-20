@@ -1,5 +1,5 @@
 # Get users created in the last 7 days
-$Date = (Get-Date).AddDays(-7)
+$Date = (Get-Date).AddDays(-60)
 
 $NewUsers = Get-ADUser -Filter {whenCreated -ge $Date} -Properties whenCreated, Name, SamAccountName |
 Select-Object Name, SamAccountName, whenCreated
