@@ -11,7 +11,13 @@ updated: 1. web_form - An HTML form for a new user registration
 .        3. security_group_list_co - Lists security groups that have Full Control, and all members with email addresses
 .        4. AD_User_info - Simple AD Users Export Script
 .        5. AD_Admin_Audit.ps1 - Check if a specific user has admin rights
-.        6. Complete AD Resources Inventory - Server 2016 - Complete Active Directory Resources Inventory Script. 
+.        6. Complete AD Resources Inventory - Server 2016 - Complete Active Directory Resources Inventory Script.
+.        7. Contact - Export ALL AD Contacts with ALL Properties
+.        8. Quick_Admin_Check.ps1 - Quick Active Directory Admin Check
+.        9. computer - list of all computers
+.        10. group_info - Groups with member list
+.        11. group_security - Export All AD Groups with Full Control Permissions
+
 
 Full Audit (Recommended) script:
 # Open PowerShell as Administrator
@@ -26,11 +32,3 @@ Quick Admin Check script:
 .\Quick_Admin_Check.ps1
 
 
-
-https://claude.ai/public/artifacts/0db201b7-307b-4b79-adef-71cff8e85dc1
-
-<img width="905" height="923" alt="image" src="https://github.com/user-attachments/assets/532bb79d-9843-4382-837f-cfa5c6604602" 
-  
-  
-  <img width="943" height="926" alt="image" src="https://github.com/user-attachments/assets/71e1dee5-436a-4017-bcdb-1c6b1327d98f" />
-/>
