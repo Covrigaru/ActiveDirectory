@@ -1,172 +1,35 @@
-#>
-
 #Requires -Modules ActiveDirectory
 
-# ── Configuration ────────────────────────────────────────────────────────────
-$DaysBack      = 30
-$OutputPath    = ".\NewADUsers_$(Get-Date -Format 'yyyyMMdd_HHmm').csv"
-$SearchBase    = (Get-ADDomain).DistinguishedName   # entire domain; scope down if needed
-$SearchScope   = "Subtree"
-# ─────────────────────────────────────────────────────────────────────────────
+$DaysBack   = 30
+$OutputPath = "C:\Temp\NewADUsers_$(Get-Date -Format 'yyyyMMdd_HHmm').csv"
+$Cutoff     = (Get-Date).AddDays(-$DaysBack)
 
-$CutoffDate = (Get-Date).AddDays(-$DaysBack)
+New-Item -Path "C:\Temp" -ItemType Directory -Force | Out-Null
 
-Write-Host "Searching for users created since $($CutoffDate.ToString('yyyy-MM-dd'))..." -ForegroundColor Cyan
+Write-Host "Querying AD for users created since $($Cutoff.ToString('yyyy-MM-dd'))..." -ForegroundColor Cyan
 
 $Properties = @(
-    # Identity
-    "DisplayName"
-    "GivenName"
-    "Surname"
-    "SamAccountName"
-    "UserPrincipalName"
-    "EmailAddress"
-    "EmployeeID"
-    "EmployeeNumber"
-    "Description"
-
-    # Location / Org
-    "Office"
-    "OfficePhone"
-    "MobilePhone"
-    "StreetAddress"
-    "City"
-    "State"
-    "PostalCode"
-    "Country"
-    "Company"
-    "Department"
-    "Division"
-    "Title"
-    "Manager"
-
-    # AD placement
-    "DistinguishedName"
-    "CanonicalName"
-    "OrganizationalUnit"
-
-    # Timestamps & status
-    "whenCreated"
-    "whenChanged"
-    "LastLogonDate"
-    "PasswordLastSet"
-    "PasswordNeverExpires"
-    "PasswordExpired"
-    "AccountExpirationDate"
-    "Enabled"
-    "LockedOut"
-
-    # Group / admin flags
-    "MemberOf"
-    "adminCount"
-
-    # Source tracking
-    "extensionAttribute1"   # often used for HR system ID or site code
-    "extensionAttribute2"
-    "extensionAttribute3"
+    "DisplayName", "GivenName", "Surname",
+    "SamAccountName", "UserPrincipalName", "EmailAddress",
+    "Title", "Department", "Company", "Office",
+    "OfficePhone", "MobilePhone",
+    "StreetAddress", "City", "State", "Country",
+    "Manager", "DistinguishedName", "CanonicalName",
+    "Enabled", "whenCreated", "LastLogonDate", "PasswordLastSet"
 )
 
-try {
-    $Users = Get-ADUser -Filter { whenCreated -ge $CutoffDate } `
-                        -SearchBase  $SearchBase `
-                        -SearchScope $SearchScope `
-                        -Properties  $Properties `
-                        -ErrorAction Stop
-} catch {
-    Write-Error "Failed to query Active Directory: $_"
-    exit 1
-}
+$Users = Get-ADUser -Filter { whenCreated -ge $Cutoff } -Properties $Properties
 
-if (-not $Users) {
-    Write-Warning "No users found created in the last $DaysBack days."
-    exit 0
-}
+Write-Host "Found $($Users.Count) user(s). Exporting..." -ForegroundColor Green
 
-Write-Host "Found $($Users.Count) user(s). Building report..." -ForegroundColor Green
+$Users | Select-Object `
+    DisplayName, GivenName, Surname,
+    SamAccountName, UserPrincipalName, EmailAddress,
+    Title, Department, Company, Office,
+    OfficePhone, MobilePhone,
+    StreetAddress, City, State, Country,
+    Manager, DistinguishedName, CanonicalName,
+    Enabled, whenCreated, LastLogonDate, PasswordLastSet |
+Export-Csv -Path $OutputPath -NoTypeInformation -Encoding UTF8
 
-$Report = foreach ($User in $Users) {
-
-    # Resolve manager DN → display name
-    $ManagerName = if ($User.Manager) {
-        try { (Get-ADUser $User.Manager -Properties DisplayName).DisplayName }
-        catch { $User.Manager }   # fall back to raw DN if lookup fails
-    } else { "" }
-
-    # Derive OU from DistinguishedName (everything after the first CN=...)
-    $OUPath = ($User.DistinguishedName -replace '^CN=[^,]+,', '')
-
-    # Flatten group membership to a semicolon-separated list
-    $Groups = ($User.MemberOf | ForEach-Object {
-        ($_ -replace '^CN=([^,]+),.+$', '$1')
-    }) -join "; "
-
-    [PSCustomObject]@{
-        # ── Identity ──────────────────────────────────────────────────
-        DisplayName          = $User.DisplayName
-        FirstName            = $User.GivenName
-        LastName             = $User.Surname
-        SamAccountName       = $User.SamAccountName
-        UserPrincipalName    = $User.UserPrincipalName
-        EmailAddress         = $User.EmailAddress
-        EmployeeID           = $User.EmployeeID
-        Description          = $User.Description
-
-        # ── Location / Org ────────────────────────────────────────────
-        Title                = $User.Title
-        Department           = $User.Department
-        Division             = $User.Division
-        Company              = $User.Company
-        Office               = $User.Office
-        OfficePhone          = $User.OfficePhone
-        MobilePhone          = $User.MobilePhone
-        StreetAddress        = $User.StreetAddress
-        City                 = $User.City
-        State                = $User.State
-        PostalCode           = $User.PostalCode
-        Country              = $User.Country
-        Manager              = $ManagerName
-
-        # ── AD Placement ──────────────────────────────────────────────
-        OUPath               = $OUPath
-        CanonicalName        = $User.CanonicalName
-
-        # ── Account Status ────────────────────────────────────────────
-        Enabled              = $User.Enabled
-        LockedOut            = $User.LockedOut
-        PasswordNeverExpires = $User.PasswordNeverExpires
-        PasswordExpired      = $User.PasswordExpired
-        AccountExpires       = $User.AccountExpirationDate
-
-        # ── Timestamps ────────────────────────────────────────────────
-        WhenCreated          = $User.whenCreated
-        WhenChanged          = $User.whenChanged
-        LastLogonDate        = $User.LastLogonDate
-        PasswordLastSet      = $User.PasswordLastSet
-
-        # ── Group Membership ──────────────────────────────────────────
-        Groups               = $Groups
-        AdminCount           = $User.adminCount
-
-        # ── Extension Attributes (HR / site codes, etc.) ──────────────
-        ExtAttr1             = $User.extensionAttribute1
-        ExtAttr2             = $User.extensionAttribute2
-        ExtAttr3             = $User.extensionAttribute3
-    }
-}
-
-# ── Export ───────────────────────────────────────────────────────────────────
-$Report | Export-Csv -Path $OutputPath -NoTypeInformation -Encoding UTF8
-
-Write-Host "`nExport complete: $OutputPath" -ForegroundColor Green
-Write-Host "Total users: $($Report.Count)"
-
-# ── Quick console summary ─────────────────────────────────────────────────────
-Write-Host "`n── Summary by Department ──" -ForegroundColor Yellow
-$Report | Group-Object Department | Sort-Object Count -Descending |
-    Select-Object @{N="Department";E={if($_.Name){"$($_.Name)"}else{"(blank)"}}}, Count |
-    Format-Table -AutoSize
-
-Write-Host "── Summary by OU ──" -ForegroundColor Yellow
-$Report | Group-Object OUPath | Sort-Object Count -Descending |
-    Select-Object @{N="OU";E={$_.Name}}, Count |
-    Format-Table -AutoSize
+Write-Host "Done: $OutputPath" -ForegroundColor Green
