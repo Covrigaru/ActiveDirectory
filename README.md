@@ -31,4 +31,5 @@ Quick Admin Check script:
 # Quick list of Domain Admins only
 .\Quick_Admin_Check.ps1
 
+https://claude.ai/public/artifacts/3b53fdfd-8d43-42ec-866b-db7e1255e04e
 
