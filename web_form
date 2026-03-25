@@ -1,1044 +1,1250 @@
-
-
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AD SE – New User</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Active Directory — New User Provisioning</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:system-ui,sans-serif;font-size:13px;color:#1a1a1a;background:#f5f5f5}
-header{background:#185FA5;color:#fff;padding:14px 24px;display:flex;align-items:center;gap:12px}
-header h1{font-size:16px;font-weight:600}
-header p{font-size:11px;opacity:.8;margin-top:2px}
-.wrap{max-width:920px;margin:20px auto;padding:0 16px 40px}
-.card{background:#fff;border:1px solid #ddd;border-radius:8px;margin-bottom:16px;overflow:hidden}
-.card-head{background:#f0f4f8;border-bottom:1px solid #ddd;padding:9px 16px;display:flex;align-items:center;gap:8px}
-.card-head .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.card-head h2{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#333}
-.card-body{padding:16px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px 20px}
-.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px 20px}
-.grid1{display:grid;grid-template-columns:1fr;gap:12px}
-.f{display:flex;flex-direction:column;gap:3px}
-.f label{font-size:11px;font-weight:600;color:#555}
-.req-star{color:#c0392b}
-.f input,.f select,.f textarea{padding:7px 10px;font-size:12px;border:1px solid #ccc;border-radius:5px;background:#fff;color:#1a1a1a;font-family:inherit;outline:none;width:100%}
-.f input:focus,.f select:focus,.f textarea:focus{border-color:#185FA5;box-shadow:0 0 0 2px rgba(24,95,165,.15)}
-.f input.invalid,.f select.invalid{border-color:#c0392b;background:#fff5f5}
-.errmsg{font-size:10px;color:#c0392b;display:none;margin-top:1px}
-.errmsg.show{display:block}
-.f textarea{resize:vertical;min-height:60px}
-.hint{font-size:10px;color:#888;margin-top:1px}
-.inline-input{display:flex;align-items:center}
-.inline-input input{border-radius:5px 0 0 5px;border-right:none;flex:1}
-.inline-input .suffix,.inline-input .prefix{padding:7px 10px;background:#f0f4f8;border:1px solid #ccc;font-size:12px;color:#666;white-space:nowrap}
-.inline-input .suffix{border-radius:0 5px 5px 0;border-left:none}
-.inline-input .prefix{border-radius:5px 0 0 5px;border-right:none}
-.inline-input .prefix+input{border-radius:0 5px 5px 0;border-left:none}
-.checks{display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-top:10px}
-.chk{display:flex;align-items:center;gap:7px;padding:5px 0}
-.chk input[type=checkbox]{width:14px;height:14px;accent-color:#185FA5;flex-shrink:0;cursor:pointer}
-.chk label{font-size:12px;color:#333;cursor:pointer}
-.chk.disabled label{color:#aaa}
-.pw-wrap{position:relative}
-.pw-wrap input{padding-right:40px}
-.pw-toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:11px;color:#888;padding:2px 4px}
-.strength-bar{height:3px;border-radius:2px;margin-top:3px;width:0;transition:width .3s,background .3s}
-.strength-lbl{font-size:10px;margin-top:2px}
-.val-box{display:none;background:#fff5f5;border:1px solid #e8b4b4;border-radius:7px;padding:12px 16px;margin-bottom:14px}
-.val-box.show{display:block}
-.val-box p{font-size:12px;font-weight:600;color:#c0392b;margin-bottom:6px}
-.val-box ul{padding-left:18px}
-.val-box li{font-size:11px;color:#922;margin-bottom:3px}
-.action-bar{background:#fff;border:1px solid #ddd;border-radius:8px;padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:opacity .15s}
-.btn:hover{opacity:.85}
-.btn:active{transform:scale(.98)}
-.btn-ghost{background:#f0f0f0;color:#444;border:1px solid #ccc}
-.btn-blue{background:#185FA5;color:#fff}
-.btn-green{background:#0F6E56;color:#fff}
-.btn-purple{background:#534AB7;color:#fff}
-.toast{position:fixed;bottom:20px;right:20px;padding:10px 18px;border-radius:8px;font-size:13px;color:#fff;display:none;z-index:9999;font-weight:500}
-.legend{display:flex;gap:10px;margin-left:auto;align-items:center}
-.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600}
-.badge-r{background:#fff0f0;color:#c0392b;border:1px solid #e8b4b4}
-.badge-o{background:#e8f4fb;color:#185FA5;border:1px solid #b5d4f4}
+  :root {
+    --bg: #0d0f14;
+    --surface: #13161e;
+    --surface2: #1a1e28;
+    --border: #252a38;
+    --border-focus: #3b82f6;
+    --accent: #3b82f6;
+    --accent2: #60a5fa;
+    --accent-glow: rgba(59,130,246,0.15);
+    --text: #e2e8f0;
+    --text-dim: #64748b;
+    --text-muted: #334155;
+    --label: #94a3b8;
+    --success: #10b981;
+    --warn: #f59e0b;
+    --danger: #ef4444;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+    --radius: 6px;
+    --transition: 0.18s ease;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    min-height: 100vh;
+    line-height: 1.6;
+    background-image:
+      radial-gradient(ellipse 80% 40% at 50% -10%, rgba(59,130,246,0.08) 0%, transparent 60%),
+      repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,0.015) 39px, rgba(255,255,255,0.015) 40px),
+      repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.015) 39px, rgba(255,255,255,0.015) 40px);
+  }
+
+  /* ── Header ── */
+  .site-header {
+    border-bottom: 1px solid var(--border);
+    background: rgba(13,15,20,0.9);
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+  }
+  .header-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .header-icon {
+    width: 28px;
+    height: 28px;
+    background: var(--accent);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+  .header-title {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: var(--text);
+  }
+  .header-sub {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+  }
+  .header-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--accent2);
+    background: rgba(59,130,246,0.1);
+    border: 1px solid rgba(59,130,246,0.25);
+    padding: 3px 8px;
+    border-radius: 3px;
+    letter-spacing: 0.08em;
+  }
+
+  /* ── Layout ── */
+  .page-wrapper {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 24px 120px;
+  }
+
+  .page-intro {
+    margin-bottom: 40px;
+  }
+  .page-intro h1 {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .page-intro p {
+    font-size: 13px;
+    color: var(--text-dim);
+    max-width: 560px;
+  }
+  .breadcrumb {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+    letter-spacing: 0.05em;
+  }
+  .breadcrumb span { color: var(--text-muted); margin: 0 6px; }
+
+  /* ── Progress nav ── */
+  .section-nav {
+    display: flex;
+    gap: 0;
+    margin-bottom: 36px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--surface);
+  }
+  .nav-tab {
+    flex: 1;
+    padding: 10px 8px;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+    cursor: pointer;
+    border-right: 1px solid var(--border);
+    transition: all var(--transition);
+    text-transform: uppercase;
+    user-select: none;
+  }
+  .nav-tab:last-child { border-right: none; }
+  .nav-tab:hover { background: var(--surface2); color: var(--label); }
+  .nav-tab.active { background: var(--accent-glow); color: var(--accent2); border-bottom: 2px solid var(--accent); }
+
+  /* ── Form Sections ── */
+  .form-section {
+    display: none;
+    animation: fadeIn 0.2s ease;
+  }
+  .form-section.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-num {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--accent);
+    background: var(--accent-glow);
+    border: 1px solid rgba(59,130,246,0.3);
+    padding: 2px 7px;
+    border-radius: 3px;
+    letter-spacing: 0.08em;
+  }
+  .section-title {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: 0.03em;
+  }
+  .section-desc {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-left: auto;
+  }
+
+  /* ── Field Grid ── */
+  .field-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .field-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .field-grid.cols-1 { grid-template-columns: 1fr; }
+  .span-2 { grid-column: span 2; }
+  .span-3 { grid-column: span 3; }
+
+  /* ── Field ── */
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .field label {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    color: var(--label);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .required-dot {
+    width: 4px;
+    height: 4px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .field-hint {
+    font-family: var(--sans);
+    font-size: 10px;
+    color: var(--text-muted);
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    margin-left: auto;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="date"],
+  input[type="url"],
+  select,
+  textarea {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    padding: 9px 12px;
+    width: 100%;
+    transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+    outline: none;
+    appearance: none;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--border-focus);
+    background: var(--surface2);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  input::placeholder, textarea::placeholder { color: var(--text-muted); font-size: 12px; }
+  select option { background: var(--surface2); color: var(--text); }
+  textarea { resize: vertical; min-height: 72px; line-height: 1.5; }
+
+  /* checkbox / toggle */
+  .toggle-field {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: border-color var(--transition), background var(--transition);
+  }
+  .toggle-field:hover { border-color: var(--border-focus); background: var(--surface2); }
+  .toggle-label { font-size: 12px; color: var(--label); }
+  .toggle-switch {
+    width: 36px;
+    height: 20px;
+    background: var(--text-muted);
+    border-radius: 10px;
+    position: relative;
+    transition: background var(--transition);
+    flex-shrink: 0;
+  }
+  .toggle-switch::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 14px;
+    height: 14px;
+    background: white;
+    border-radius: 50%;
+    transition: left var(--transition);
+  }
+  input[type="checkbox"] { display: none; }
+  input[type="checkbox"]:checked + .toggle-field .toggle-switch { background: var(--accent); }
+  input[type="checkbox"]:checked + .toggle-field .toggle-switch::after { left: 19px; }
+
+  /* ── Divider ── */
+  .field-divider {
+    grid-column: 1 / -1;
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 4px 0;
+  }
+  .field-group-label {
+    grid-column: 1 / -1;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding-top: 4px;
+  }
+
+  /* ── Navigation buttons ── */
+  .nav-buttons {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 32px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  .btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 10px 20px;
+    border-radius: var(--radius);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .btn-ghost {
+    background: transparent;
+    border-color: var(--border);
+    color: var(--text-dim);
+  }
+  .btn-ghost:hover { border-color: var(--label); color: var(--text); background: var(--surface2); }
+  .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+  .btn-primary:hover { background: var(--accent2); border-color: var(--accent2); box-shadow: 0 0 20px var(--accent-glow); }
+  .btn-success {
+    background: transparent;
+    border-color: var(--success);
+    color: var(--success);
+  }
+  .btn-success:hover { background: rgba(16,185,129,0.1); box-shadow: 0 0 16px rgba(16,185,129,0.15); }
+  .btn-warn {
+    background: transparent;
+    border-color: var(--warn);
+    color: var(--warn);
+  }
+  .btn-warn:hover { background: rgba(245,158,11,0.1); }
+  .btn-danger {
+    background: transparent;
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+  .btn-danger:hover { background: rgba(239,68,68,0.1); }
+
+  /* ── Action Bar (bottom fixed) ── */
+  .action-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(13,15,20,0.95);
+    backdrop-filter: blur(16px);
+    border-top: 1px solid var(--border);
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 200;
+  }
+  .action-bar-left {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+  .action-bar-right { display: flex; gap: 10px; }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed;
+    top: 72px;
+    right: 24px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text);
+    z-index: 999;
+    opacity: 0;
+    transform: translateY(-8px);
+    transition: all 0.25s ease;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.success { border-color: var(--success); }
+  .toast.error { border-color: var(--danger); }
+
+  /* ── Password strength ── */
+  .pw-strength {
+    display: flex;
+    gap: 4px;
+    margin-top: 4px;
+  }
+  .pw-bar {
+    flex: 1;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    transition: background 0.3s;
+  }
+  .pw-bar.weak { background: var(--danger); }
+  .pw-bar.medium { background: var(--warn); }
+  .pw-bar.strong { background: var(--success); }
+  .pw-label { font-family: var(--mono); font-size: 10px; color: var(--text-dim); margin-top: 4px; }
+
+  /* ── Summary page ── */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .summary-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+  }
+  .summary-key {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 3px;
+  }
+  .summary-val {
+    font-size: 13px;
+    color: var(--text);
+    word-break: break-all;
+  }
+  .summary-section-title {
+    grid-column: 1 / -1;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    padding: 8px 0 4px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 4px;
+  }
+
+  @media (max-width: 640px) {
+    .field-grid, .field-grid.cols-3 { grid-template-columns: 1fr; }
+    .span-2, .span-3 { grid-column: span 1; }
+    .summary-grid { grid-template-columns: 1fr; }
+    .section-nav { flex-wrap: wrap; }
+    .nav-tab { font-size: 9px; }
+  }
+
+  @media print {
+    .site-header, .action-bar, .nav-buttons, .section-nav { display: none !important; }
+    .form-section { display: block !important; margin-bottom: 32px; }
+    body { background: white; color: black; }
+    input, select, textarea { border: 1px solid #ccc; background: white; color: black; }
+  }
 </style>
 </head>
 <body>
 
-<header>
-  <div>
-    <h1>New user — Active Directory SE</h1>
-    <p>nrn.nrcan.gc.ca &nbsp;·&nbsp; Windows Server 2022 / AD Security Edition</p>
+<header class="site-header">
+  <div class="header-brand">
+    <div class="header-icon">🖥</div>
+    <div>
+      <div class="header-title">Active Directory</div>
+      <div class="header-sub">User Provisioning Form</div>
+    </div>
   </div>
-  <div class="legend">
-    <span class="badge badge-r">* Required</span>
-    <span class="badge badge-o">Optional</span>
-  </div>
+  <div class="header-badge">AD DS · Windows Server</div>
 </header>
 
-<div class="wrap">
-
-<!-- IDENTITY -->
-<div class="card">
-  <div class="card-head"><div class="dot" style="background:#185FA5"></div><h2>Identity</h2></div>
-  <div class="card-body">
-    <div class="grid3">
-      <div class="f">
-        <label>First name <span class="req-star">*</span></label>
-        <input type="text" id="firstName" placeholder="e.g. Jane">
-        <span class="errmsg" id="e_firstName">First name is required</span>
-      </div>
-      <div class="f">
-        <label>Initials</label>
-        <input type="text" id="initials" maxlength="5" placeholder="e.g. M">
-      </div>
-      <div class="f">
-        <label>Last name <span class="req-star">*</span></label>
-        <input type="text" id="lastName" placeholder="e.g. Smith">
-        <span class="errmsg" id="e_lastName">Last name is required</span>
-      </div>
-      <div class="f">
-        <label>Display name <span class="req-star">*</span></label>
-        <input type="text" id="displayName" placeholder="Auto-filled">
-        <span class="errmsg" id="e_displayName">Display name is required</span>
-      </div>
-      <div class="f">
-        <label>Full name (CN)</label>
-        <input type="text" id="fullName" placeholder="Common name">
-      </div>
-      <div class="f">
-        <label>Description</label>
-        <input type="text" id="description" placeholder="e.g. IT Analyst – Ottawa">
-      </div>
-    </div>
+<div class="page-wrapper">
+  <div class="page-intro">
+    <div class="breadcrumb">AD Users & Computers <span>›</span> New User <span>›</span> Provision</div>
+    <h1>New User Object</h1>
+    <p>Complete all applicable fields across the sections below. Required fields are indicated with a blue dot. Use the tab navigation to move between attribute groups.</p>
   </div>
-</div>
 
-<!-- ACCOUNT -->
-<div class="card">
-  <div class="card-head"><div class="dot" style="background:#0F6E56"></div><h2>Account</h2></div>
-  <div class="card-body">
-    <div class="grid2">
-      <div class="f">
-        <label>User logon name (UPN) <span class="req-star">*</span></label>
-        <div class="inline-input">
-          <input type="text" id="upnPrefix" placeholder="firstname.lastname">
-          <span class="suffix">@nrn.nrcan.gc.ca</span>
-        </div>
-        <span class="errmsg" id="e_upnPrefix">UPN is required</span>
-      </div>
-      <div class="f">
-        <label>sAMAccountName (pre-Win2000) <span class="req-star">*</span></label>
-        <div class="inline-input">
-          <span class="prefix">NRN\</span>
-          <input type="text" id="samAccount" placeholder="jsmith" maxlength="20">
-        </div>
-        <div class="hint">Max 20 chars, no special characters</div>
-        <span class="errmsg" id="e_samAccount">sAMAccountName is required</span>
-      </div>
-      <div class="f">
-        <label>Password</label>
-        <div class="pw-wrap">
-          <input type="password" id="password" placeholder="Min 12 chars">
-          <button class="pw-toggle" type="button" onclick="togglePw('password')">show</button>
-        </div>
-        <div class="strength-bar" id="sbar"></div>
-        <div class="strength-lbl" id="slbl"></div>
-      </div>
-      <div class="f">
-        <label>Confirm password</label>
-        <div class="pw-wrap">
-          <input type="password" id="confirmPw" placeholder="Re-enter password">
-          <button class="pw-toggle" type="button" onclick="togglePw('confirmPw')">show</button>
-        </div>
-        <span class="errmsg" id="e_confirmPw">Passwords do not match</span>
-      </div>
-      <div class="f">
-        <label>Account expires</label>
-        <select id="acctExpires" onchange="document.getElementById('expiryWrap').style.display=this.value==='date'?'':'none'">
-          <option value="never">Never</option>
-          <option value="date">End of date</option>
-        </select>
-      </div>
-      <div class="f" id="expiryWrap" style="display:none">
-        <label>Expiry date</label>
-        <input type="date" id="expiryDate">
-      </div>
-      <div class="f">
-        <label>Logon hours</label>
-        <select id="logonHours">
-          <option>All hours (default)</option>
-          <option>Business hours only (8am–6pm Mon–Fri)</option>
-          <option>Custom (contact AD admin)</option>
-        </select>
-      </div>
-      <div class="f">
-        <label>Log on to (workstations)</label>
-        <input type="text" id="logonWorkstations" placeholder="All computers (default)">
-      </div>
-    </div>
-    <div class="checks">
-      <div class="chk"><input type="checkbox" id="mustChangePw" checked><label for="mustChangePw">User must change password at next logon</label></div>
-      <div class="chk"><input type="checkbox" id="cannotChangePw"><label for="cannotChangePw">User cannot change password</label></div>
-      <div class="chk"><input type="checkbox" id="pwNeverExpires"><label for="pwNeverExpires">Password never expires</label></div>
-      <div class="chk"><input type="checkbox" id="accountDisabled"><label for="accountDisabled">Account is disabled</label></div>
-      <div class="chk"><input type="checkbox" id="smartCardRequired"><label for="smartCardRequired">Smart card required for interactive logon</label></div>
-      <div class="chk disabled"><input type="checkbox" id="accountLocked" disabled><label for="accountLocked">Account is locked out (read-only)</label></div>
-    </div>
-    <div class="f" style="margin-top:10px">
-      <label>userAccountControl (auto-calculated)</label>
-      <input type="text" id="uac" readonly style="color:#888;background:#f8f8f8">
-    </div>
+  <div class="section-nav" id="sectionNav">
+    <div class="nav-tab active" onclick="goTo(0)">01 · Identity</div>
+    <div class="nav-tab" onclick="goTo(1)">02 · Account</div>
+    <div class="nav-tab" onclick="goTo(2)">03 · Profile</div>
+    <div class="nav-tab" onclick="goTo(3)">04 · Organization</div>
+    <div class="nav-tab" onclick="goTo(4)">05 · Contact</div>
+    <div class="nav-tab" onclick="goTo(5)">06 · Address</div>
+    <div class="nav-tab" onclick="goTo(6)">07 · Groups & Attrs</div>
+    <div class="nav-tab" onclick="goTo(7)">08 · Review</div>
   </div>
-</div>
 
-<!-- ORGANISATION -->
-<div class="card">
-  <div class="card-head"><div class="dot" style="background:#534AB7"></div><h2>Organisation</h2></div>
-  <div class="card-body">
-    <div class="grid3">
-      <div class="f">
-        <label>Job title <span class="req-star">*</span></label>
-        <input type="text" id="jobTitle" placeholder="e.g. Senior IT Analyst">
-        <span class="errmsg" id="e_jobTitle">Job title is required</span>
+  <!-- ══════════════ SECTION 1: IDENTITY ══════════════ -->
+  <div class="form-section active" id="section-0">
+    <div class="section-header">
+      <span class="section-num">01</span>
+      <span class="section-title">Identity &amp; Name</span>
+      <span class="section-desc">Core identity attributes</span>
+    </div>
+    <div class="field-grid">
+      <div class="field">
+        <label><span class="required-dot"></span> First Name <span class="field-hint">givenName</span></label>
+        <input type="text" id="givenName" placeholder="John" oninput="autoGenerate()">
       </div>
-      <div class="f">
-        <label>Department <span class="req-star">*</span></label>
-        <input type="text" id="department" placeholder="e.g. IT Security">
-        <span class="errmsg" id="e_department">Department is required</span>
+      <div class="field">
+        <label>Middle Name / Initials <span class="field-hint">initials</span></label>
+        <input type="text" id="initials" placeholder="M" maxlength="6" oninput="autoGenerate()">
       </div>
-      <div class="f">
-        <label>Company <span class="req-star">*</span></label>
-        <input type="text" id="company" value="Natural Resources Canada">
-        <span class="errmsg" id="e_company">Company is required</span>
+      <div class="field">
+        <label><span class="required-dot"></span> Last Name <span class="field-hint">sn</span></label>
+        <input type="text" id="sn" placeholder="Doe" oninput="autoGenerate()">
       </div>
-      <div class="f">
-        <label>Manager</label>
-        <input type="text" id="manager" placeholder="CN=John Doe,OU=Ottawa,...">
+      <div class="field">
+        <label>Display Name <span class="field-hint">displayName</span></label>
+        <input type="text" id="displayName" placeholder="Auto-generated">
       </div>
-      <div class="f">
-        <label>Employee ID</label>
-        <input type="text" id="employeeId" placeholder="e.g. NRC-00123">
+      <div class="field">
+        <label>Full Name / CN <span class="field-hint">cn</span></label>
+        <input type="text" id="cn" placeholder="Auto-generated">
       </div>
-      <div class="f">
-        <label>Employee type</label>
+      <div class="field">
+        <label>Name Suffix <span class="field-hint">generationQualifier</span></label>
+        <input type="text" id="generationQualifier" placeholder="Jr., Sr., III">
+      </div>
+      <div class="field">
+        <label>Personal Title <span class="field-hint">personalTitle</span></label>
+        <input type="text" id="personalTitle" placeholder="Dr., Prof., Eng.">
+      </div>
+      <div class="field">
+        <label>Nick Name <span class="field-hint">middleName</span></label>
+        <input type="text" id="middleName" placeholder="Preferred name / alias">
+      </div>
+      <hr class="field-divider">
+      <div class="field-group-label">Organizational Unit Placement</div>
+      <div class="field span-2">
+        <label><span class="required-dot"></span> Target OU (Distinguished Name) <span class="field-hint">path</span></label>
+        <input type="text" id="ou" placeholder="OU=Users,OU=Toronto,DC=corp,DC=example,DC=com">
+      </div>
+      <div class="field">
+        <label>Employee Type <span class="field-hint">employeeType</span></label>
         <select id="employeeType">
-          <option value="">— select —</option>
-          <option>Full-time</option><option>Part-time</option><option>Contractor</option>
-          <option>Consultant</option><option>Student / Co-op</option><option>Service account</option>
+          <option value="">— Select —</option>
+          <option>Full-Time</option>
+          <option>Part-Time</option>
+          <option>Contractor</option>
+          <option>Temporary</option>
+          <option>Intern</option>
+          <option>Consultant</option>
+          <option>Vendor</option>
+          <option>Service Account</option>
         </select>
       </div>
-      <div class="f">
-        <label>Division</label>
-        <input type="text" id="division" placeholder="e.g. Earth Sciences Sector">
+      <div class="field">
+        <label>Employee ID <span class="field-hint">employeeID</span></label>
+        <input type="text" id="employeeID" placeholder="EMP-00123">
+      </div>
+      <div class="field">
+        <label>Employee Number <span class="field-hint">employeeNumber</span></label>
+        <input type="text" id="employeeNumber" placeholder="00123">
+      </div>
+      <div class="field">
+        <label>Badge / Smart Card ID <span class="field-hint">msDS-cloudExtensionAttribute1</span></label>
+        <input type="text" id="badgeID" placeholder="Badge or card number">
       </div>
     </div>
+    <div class="nav-buttons">
+      <span></span>
+      <button class="btn btn-primary" onclick="goTo(1)">Account →</button>
+    </div>
   </div>
-</div>
 
-<!-- PROFILE & OU -->
-<div class="card">
-  <div class="card-head"><div class="dot" style="background:#D85A30"></div><h2>Profile &amp; OU placement</h2></div>
-  <div class="card-body">
-    <div class="grid2">
-      <div class="f">
-        <label>Organizational Unit (OU) <span class="req-star">*</span></label>
-        <select id="ouPath">
-          <option value="">— select OU —</option>
-          <optgroup label="Atlantic">
-            <option value="OU=AMH-Users,OU=Amherst,OU=Atlantic,OU=Locations,DC=nrn,DC=nrcan,DC=gc,DC=ca">Atlantic › Amherst › Users</option>
-            <option value="OU=COR-Users,OU=Comer_Brook,OU=Atlantic,OU=Locations,DC=nrn,DC=nrcan,DC=gc,DC=ca">Atlantic › Comer Brook › Users</option>
-            <option value="OU=DAR-Users,OU=Dartmouth,OU=Atlantic,OU=Locations,DC=nrn,DC=nrcan,DC=gc,DC=ca">Atlantic › Dartmouth › Users</option>
-          </optgroup>
-          <optgroup label="Central">
-            <option value="OU=CHK-Users,OU=Chalk_River,OU=Central,OU=Locations,DC=nrn,DC=nrcan,DC=gc,DC=ca">Central › Chalk River › Users</option>
-            <option value="OU=HAM-Users,OU=Hamilton,OU=Central,OU=Locations,DC=nrn,DC=nrcan,DC=gc,DC=ca">Central › Hamilton › Users</option>
-            <option value="OU=SSM-Users,OU=Sault_Ste_Marie,OU=Central,OU=Locations,DC=nrn,DC=nrcan,DC=gc,DC=ca">Central › Sault Ste. Marie › Users</option>
-            <option value="OU=OTT-Users,OU=Ottawa,OU=Central,OU=Locations,DC=nrn,DC=nrcan,DC=gc,DC=ca">Central › Ottawa › Users</option>
-          </optgroup>
-          <optgroup label="Pacific">
-            <option value="OU=SID-Users,OU=Sidney,OU=Pacific,OU=Locations,DC=nrn,DC=nrcan,DC=gc,DC=ca">Pacific › Sidney › Users</option>
-            <option value="OU=VAN-Users,OU=Vancouver,OU=Pacific,OU=Locations,DC=nrn,DC=nrcan,DC=gc,DC=ca">Pacific › Vancouver › Users</option>
-            <option value="OU=MPW-Users,OU=Major_Project_West,OU=Pacific,OU=Locations,DC=nrn,DC=nrcan,DC=gc,DC=ca">Pacific › Major Project West › Users</option>
-          </optgroup>
-          <optgroup label="Enterprise">
-            <option value="OU=Enterprise-Groups,OU=Enterprise-Resources,DC=nrn,DC=nrcan,DC=gc,DC=ca">Enterprise Resources › Groups</option>
-          </optgroup>
+  <!-- ══════════════ SECTION 2: ACCOUNT ══════════════ -->
+  <div class="form-section" id="section-1">
+    <div class="section-header">
+      <span class="section-num">02</span>
+      <span class="section-title">Account &amp; Security</span>
+      <span class="section-desc">Logon, password, and access policy</span>
+    </div>
+    <div class="field-grid">
+      <div class="field">
+        <label><span class="required-dot"></span> SAM Account Name <span class="field-hint">sAMAccountName</span></label>
+        <input type="text" id="sAMAccountName" placeholder="jdoe" oninput="syncUPN()">
+      </div>
+      <div class="field">
+        <label><span class="required-dot"></span> UPN (User Logon Name) <span class="field-hint">userPrincipalName</span></label>
+        <input type="text" id="userPrincipalName" placeholder="jdoe@corp.example.com">
+      </div>
+      <div class="field span-2">
+        <label><span class="required-dot"></span> Password <span class="field-hint">AccountPassword</span></label>
+        <input type="password" id="password" placeholder="Min. 8 chars, complexity required" oninput="checkPW()">
+        <div class="pw-strength">
+          <div class="pw-bar" id="pw1"></div>
+          <div class="pw-bar" id="pw2"></div>
+          <div class="pw-bar" id="pw3"></div>
+          <div class="pw-bar" id="pw4"></div>
+        </div>
+        <div class="pw-label" id="pwLabel">Enter a password</div>
+      </div>
+      <div class="field span-2">
+        <label>Confirm Password</label>
+        <input type="password" id="confirmPassword" placeholder="Re-enter password">
+      </div>
+      <hr class="field-divider">
+      <div class="field-group-label">Account Flags</div>
+
+      <label><input type="checkbox" id="mustChangePW" checked><div class="toggle-field"><span class="toggle-label">User must change password at next logon</span><div class="toggle-switch"></div></div></label>
+      <label><input type="checkbox" id="cannotChangePW"><div class="toggle-field"><span class="toggle-label">User cannot change password</span><div class="toggle-switch"></div></div></label>
+      <label><input type="checkbox" id="pwNeverExpires"><div class="toggle-field"><span class="toggle-label">Password never expires</span><div class="toggle-switch"></div></div></label>
+      <label><input type="checkbox" id="accountDisabled"><div class="toggle-field"><span class="toggle-label">Account is disabled</span><div class="toggle-switch"></div></div></label>
+      <label><input type="checkbox" id="smartcardRequired"><div class="toggle-field"><span class="toggle-label">Smartcard is required for interactive logon</span><div class="toggle-switch"></div></div></label>
+      <label><input type="checkbox" id="trustedForDelegation"><div class="toggle-field"><span class="toggle-label">Account is trusted for delegation (Kerberos)</span><div class="toggle-switch"></div></div></label>
+      <label><input type="checkbox" id="dontRequirePreauth"><div class="toggle-field"><span class="toggle-label">Do not require Kerberos preauthentication</span><div class="toggle-switch"></div></div></label>
+      <label><input type="checkbox" id="sensitiveNoDelegate"><div class="toggle-field"><span class="toggle-label">Account is sensitive — cannot be delegated</span><div class="toggle-switch"></div></div></label>
+
+      <hr class="field-divider">
+      <div class="field-group-label">Account Lifecycle</div>
+      <div class="field">
+        <label>Account Expiration Date <span class="field-hint">accountExpires</span></label>
+        <input type="date" id="accountExpires">
+      </div>
+      <div class="field">
+        <label>Logon Hours Policy <span class="field-hint">logonHours</span></label>
+        <select id="logonHours">
+          <option value="">All hours (default)</option>
+          <option value="BusinessHours">Business Hours (Mon–Fri 08:00–18:00)</option>
+          <option value="ExtendedHours">Extended (Mon–Fri 07:00–21:00)</option>
+          <option value="Custom">Custom — specify separately</option>
         </select>
-        <span class="errmsg" id="e_ouPath">OU placement is required</span>
       </div>
-      <div class="f">
-        <label>Profile path (roaming)</label>
-        <input type="text" id="profilePath" placeholder="\\server\profiles\%username%">
+      <div class="field span-2">
+        <label>Allowed Logon Workstations <span class="field-hint">userWorkstations</span></label>
+        <input type="text" id="userWorkstations" placeholder="PC001,PC002  (blank = all)">
       </div>
-      <div class="f">
-        <label>Logon script</label>
-        <input type="text" id="logonScript" placeholder="e.g. logon.bat">
+      <div class="field">
+        <label>Password Last Set Override <span class="field-hint">pwdLastSet</span></label>
+        <select id="pwdLastSet">
+          <option value="0">Force change on next logon (0)</option>
+          <option value="-1">Set to current date/time (−1)</option>
+        </select>
       </div>
-      <div class="f">
-        <label>Home folder — local path</label>
-        <input type="text" id="homeFolderLocal" placeholder="C:\Users\%username%">
+      <div class="field">
+        <label>Fine-Grained Password Policy <span class="field-hint">msDS-ResultantPSO</span></label>
+        <input type="text" id="resultantPSO" placeholder="PSO name or DN">
       </div>
-      <div class="f">
-        <label>Home folder — connect drive</label>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn btn-ghost" onclick="goTo(0)">← Identity</button>
+      <button class="btn btn-primary" onclick="goTo(2)">Profile →</button>
+    </div>
+  </div>
+
+  <!-- ══════════════ SECTION 3: PROFILE ══════════════ -->
+  <div class="form-section" id="section-2">
+    <div class="section-header">
+      <span class="section-num">03</span>
+      <span class="section-title">Profile &amp; Environment</span>
+      <span class="section-desc">Roaming profiles, home drive, login scripts</span>
+    </div>
+    <div class="field-grid">
+      <div class="field span-2">
+        <label>Profile Path <span class="field-hint">profilePath</span></label>
+        <input type="text" id="profilePath" placeholder="\\fileserver\profiles\%username%">
+      </div>
+      <div class="field span-2">
+        <label>Login Script <span class="field-hint">scriptPath</span></label>
+        <input type="text" id="scriptPath" placeholder="logon.bat or scripts\user_logon.ps1">
+      </div>
+      <hr class="field-divider">
+      <div class="field-group-label">Home Folder</div>
+      <div class="field">
+        <label>Home Drive Letter <span class="field-hint">homeDrive</span></label>
         <select id="homeDrive">
-          <option value="">— none —</option>
-          <option>H:</option><option>I:</option><option>J:</option><option>K:</option><option>U:</option><option>Z:</option>
+          <option value="">— None —</option>
+          <option>H:</option><option>I:</option><option>J:</option>
+          <option>K:</option><option>M:</option><option>U:</option><option>Z:</option>
         </select>
       </div>
-      <div class="f">
-        <label>Home folder — UNC path</label>
-        <input type="text" id="homeFolder" placeholder="\\server\home\%username%">
+      <div class="field">
+        <label>Home Directory Path <span class="field-hint">homeDirectory</span></label>
+        <input type="text" id="homeDirectory" placeholder="\\fileserver\homes\%username%">
       </div>
+      <hr class="field-divider">
+      <div class="field-group-label">Terminal Services / Remote Desktop Profile</div>
+      <div class="field span-2">
+        <label>RDS Profile Path <span class="field-hint">terminalServicesProfilePath</span></label>
+        <input type="text" id="tsProfilePath" placeholder="\\rdsserver\profiles\%username%">
+      </div>
+      <div class="field span-2">
+        <label>RDS Home Directory <span class="field-hint">terminalServicesHomeDirectory</span></label>
+        <input type="text" id="tsHomeDirectory" placeholder="\\rdsserver\homes\%username%">
+      </div>
+      <div class="field">
+        <label>RDS Home Drive <span class="field-hint">terminalServicesHomeDrive</span></label>
+        <select id="tsHomeDrive">
+          <option value="">— None —</option>
+          <option>H:</option><option>U:</option><option>Z:</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>RDS Logon Script <span class="field-hint">terminalServicesInitialProgram</span></label>
+        <input type="text" id="tsInitialProgram" placeholder="cmd.exe or initial app path">
+      </div>
+      <label><input type="checkbox" id="tsAllowLogon"><div class="toggle-field"><span class="toggle-label">Allow Remote Desktop Services logon</span><div class="toggle-switch"></div></div></label>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn btn-ghost" onclick="goTo(1)">← Account</button>
+      <button class="btn btn-primary" onclick="goTo(3)">Organization →</button>
+    </div>
+  </div>
+
+  <!-- ══════════════ SECTION 4: ORGANIZATION ══════════════ -->
+  <div class="form-section" id="section-3">
+    <div class="section-header">
+      <span class="section-num">04</span>
+      <span class="section-title">Organization</span>
+      <span class="section-desc">Job title, department, reporting structure</span>
+    </div>
+    <div class="field-grid">
+      <div class="field">
+        <label>Job Title <span class="field-hint">title</span></label>
+        <input type="text" id="title" placeholder="Software Engineer">
+      </div>
+      <div class="field">
+        <label>Department <span class="field-hint">department</span></label>
+        <input type="text" id="department" placeholder="Information Technology">
+      </div>
+      <div class="field">
+        <label>Company <span class="field-hint">company</span></label>
+        <input type="text" id="company" placeholder="Acme Corporation">
+      </div>
+      <div class="field">
+        <label>Division <span class="field-hint">division</span></label>
+        <input type="text" id="division" placeholder="Technology &amp; Innovation">
+      </div>
+      <div class="field span-2">
+        <label>Manager (Distinguished Name) <span class="field-hint">manager</span></label>
+        <input type="text" id="manager" placeholder="CN=Jane Smith,OU=Management,DC=corp,DC=example,DC=com">
+      </div>
+      <div class="field span-2">
+        <label>Assistant DN <span class="field-hint">assistant</span></label>
+        <input type="text" id="assistant" placeholder="CN=Bob Assistant,OU=Users,DC=corp,DC=example,DC=com">
+      </div>
+      <div class="field">
+        <label>Cost Center <span class="field-hint">extensionAttribute1</span></label>
+        <input type="text" id="costCenter" placeholder="CC-4501">
+      </div>
+      <div class="field">
+        <label>Business Unit <span class="field-hint">extensionAttribute2</span></label>
+        <input type="text" id="businessUnit" placeholder="BU-EMEA">
+      </div>
+      <div class="field">
+        <label>Office Location <span class="field-hint">physicalDeliveryOfficeName</span></label>
+        <input type="text" id="physicalDeliveryOfficeName" placeholder="Toronto HQ — Floor 12">
+      </div>
+      <div class="field">
+        <label>Site / Location Code <span class="field-hint">l (locality)</span></label>
+        <input type="text" id="l" placeholder="TOR, NYC, LON">
+      </div>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn btn-ghost" onclick="goTo(2)">← Profile</button>
+      <button class="btn btn-primary" onclick="goTo(4)">Contact →</button>
+    </div>
+  </div>
+
+  <!-- ══════════════ SECTION 5: CONTACT ══════════════ -->
+  <div class="form-section" id="section-4">
+    <div class="section-header">
+      <span class="section-num">05</span>
+      <span class="section-title">Contact Information</span>
+      <span class="section-desc">Phone numbers, email, web</span>
+    </div>
+    <div class="field-grid">
+      <div class="field">
+        <label>Primary Email <span class="field-hint">mail</span></label>
+        <input type="email" id="mail" placeholder="jdoe@corp.example.com">
+      </div>
+      <div class="field">
+        <label>Proxy Addresses <span class="field-hint">proxyAddresses</span></label>
+        <input type="text" id="proxyAddresses" placeholder="smtp:alias@example.com">
+      </div>
+      <div class="field">
+        <label>Telephone (Office) <span class="field-hint">telephoneNumber</span></label>
+        <input type="tel" id="telephoneNumber" placeholder="+1 416 555 0100">
+      </div>
+      <div class="field">
+        <label>Mobile / Cell <span class="field-hint">mobile</span></label>
+        <input type="tel" id="mobile" placeholder="+1 647 555 0101">
+      </div>
+      <div class="field">
+        <label>Home Phone <span class="field-hint">homePhone</span></label>
+        <input type="tel" id="homePhone" placeholder="+1 905 555 0102">
+      </div>
+      <div class="field">
+        <label>Pager <span class="field-hint">pager</span></label>
+        <input type="tel" id="pager" placeholder="+1 800 555 0103">
+      </div>
+      <div class="field">
+        <label>IP Phone / VoIP <span class="field-hint">ipPhone</span></label>
+        <input type="tel" id="ipPhone" placeholder="Extension or SIP address">
+      </div>
+      <div class="field">
+        <label>Fax <span class="field-hint">facsimileTelephoneNumber</span></label>
+        <input type="tel" id="facsimileTelephoneNumber" placeholder="+1 416 555 0199">
+      </div>
+      <div class="field">
+        <label>Other Telephone (list) <span class="field-hint">otherTelephone</span></label>
+        <input type="text" id="otherTelephone" placeholder="+1 416 555 0104; +1 416 555 0105">
+      </div>
+      <div class="field">
+        <label>Other Mobile <span class="field-hint">otherMobile</span></label>
+        <input type="text" id="otherMobile" placeholder="Comma-separated">
+      </div>
+      <div class="field span-2">
+        <label>Web Page URL <span class="field-hint">wWWHomePage</span></label>
+        <input type="url" id="wWWHomePage" placeholder="https://intranet.example.com/jdoe">
+      </div>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn btn-ghost" onclick="goTo(3)">← Organization</button>
+      <button class="btn btn-primary" onclick="goTo(5)">Address →</button>
+    </div>
+  </div>
+
+  <!-- ══════════════ SECTION 6: ADDRESS ══════════════ -->
+  <div class="form-section" id="section-5">
+    <div class="section-header">
+      <span class="section-num">06</span>
+      <span class="section-title">Address</span>
+      <span class="section-desc">Street, city, postal, country</span>
+    </div>
+    <div class="field-grid">
+      <div class="field span-2">
+        <label>Street Address <span class="field-hint">streetAddress</span></label>
+        <textarea id="streetAddress" placeholder="123 Bay Street&#10;Suite 400"></textarea>
+      </div>
+      <div class="field">
+        <label>P.O. Box <span class="field-hint">postOfficeBox</span></label>
+        <input type="text" id="postOfficeBox" placeholder="PO Box 1234">
+      </div>
+      <div class="field">
+        <label>City <span class="field-hint">l</span></label>
+        <input type="text" id="city" placeholder="Toronto">
+      </div>
+      <div class="field">
+        <label>State / Province <span class="field-hint">st</span></label>
+        <input type="text" id="st" placeholder="Ontario">
+      </div>
+      <div class="field">
+        <label>Postal / ZIP Code <span class="field-hint">postalCode</span></label>
+        <input type="text" id="postalCode" placeholder="M5H 2N2">
+      </div>
+      <div class="field">
+        <label>Country / Region <span class="field-hint">co / c / countryCode</span></label>
+        <select id="co">
+          <option value="">— Select country —</option>
+          <option value="CA">Canada</option>
+          <option value="US">United States</option>
+          <option value="GB">United Kingdom</option>
+          <option value="AU">Australia</option>
+          <option value="DE">Germany</option>
+          <option value="FR">France</option>
+          <option value="JP">Japan</option>
+          <option value="CN">China</option>
+          <option value="IN">India</option>
+          <option value="SG">Singapore</option>
+          <option value="NL">Netherlands</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn btn-ghost" onclick="goTo(4)">← Contact</button>
+      <button class="btn btn-primary" onclick="goTo(6)">Groups &amp; Attrs →</button>
+    </div>
+  </div>
+
+  <!-- ══════════════ SECTION 7: GROUPS & EXTRA ATTRS ══════════════ -->
+  <div class="form-section" id="section-6">
+    <div class="section-header">
+      <span class="section-num">07</span>
+      <span class="section-title">Groups &amp; Extended Attributes</span>
+      <span class="section-desc">Memberships, Exchange, custom fields</span>
+    </div>
+    <div class="field-grid">
+      <div class="field-group-label">Group Memberships</div>
+      <div class="field span-2">
+        <label>Member Of (Group DNs) <span class="field-hint">memberOf</span></label>
+        <textarea id="memberOf" placeholder="CN=IT-Staff,OU=Groups,DC=corp,DC=example,DC=com&#10;CN=VPN-Users,OU=Groups,DC=corp,DC=example,DC=com&#10;(one DN per line)"></textarea>
+      </div>
+      <div class="field span-2">
+        <label>Primary Group <span class="field-hint">primaryGroupID</span></label>
+        <input type="text" id="primaryGroupID" placeholder="Domain Users (default: 513)">
+      </div>
+
+      <hr class="field-divider">
+      <div class="field-group-label">Exchange / Mail Attributes</div>
+      <div class="field">
+        <label>Exchange Alias <span class="field-hint">mailNickname</span></label>
+        <input type="text" id="mailNickname" placeholder="jdoe">
+      </div>
+      <div class="field">
+        <label>Mailbox Database <span class="field-hint">homeMDB</span></label>
+        <input type="text" id="homeMDB" placeholder="CN=Mailbox Database,CN=...">
+      </div>
+      <div class="field span-2">
+        <label>Exchange Server DN <span class="field-hint">msExchHomeServerName</span></label>
+        <input type="text" id="msExchHomeServerName" placeholder="CN=EXCH01,...">
+      </div>
+      <label><input type="checkbox" id="hideFromAddressList"><div class="toggle-field"><span class="toggle-label">Hide from Global Address List (GAL)</span><div class="toggle-switch"></div></div></label>
+
+      <hr class="field-divider">
+      <div class="field-group-label">Extension Attributes (Custom / HR sync)</div>
+      <div class="field">
+        <label>extensionAttribute3</label>
+        <input type="text" id="extensionAttribute3" placeholder="">
+      </div>
+      <div class="field">
+        <label>extensionAttribute4</label>
+        <input type="text" id="extensionAttribute4" placeholder="">
+      </div>
+      <div class="field">
+        <label>extensionAttribute5</label>
+        <input type="text" id="extensionAttribute5" placeholder="">
+      </div>
+      <div class="field">
+        <label>extensionAttribute6</label>
+        <input type="text" id="extensionAttribute6" placeholder="">
+      </div>
+      <div class="field">
+        <label>extensionAttribute7</label>
+        <input type="text" id="extensionAttribute7" placeholder="">
+      </div>
+      <div class="field">
+        <label>extensionAttribute8</label>
+        <input type="text" id="extensionAttribute8" placeholder="">
+      </div>
+
+      <hr class="field-divider">
+      <div class="field-group-label">Miscellaneous</div>
+      <div class="field span-2">
+        <label>Description <span class="field-hint">description</span></label>
+        <input type="text" id="description" placeholder="Short account description">
+      </div>
+      <div class="field span-2">
+        <label>Notes / Info <span class="field-hint">info</span></label>
+        <textarea id="info" placeholder="Free-form notes about this user account..."></textarea>
+      </div>
+      <div class="field">
+        <label>User Account Control (decimal) <span class="field-hint">userAccountControl</span></label>
+        <input type="number" id="userAccountControl" placeholder="512 = Normal account">
+      </div>
+      <div class="field">
+        <label>Preferred Language <span class="field-hint">preferredLanguage</span></label>
+        <input type="text" id="preferredLanguage" placeholder="en-CA">
+      </div>
+      <div class="field">
+        <label>Thumbnail Photo path <span class="field-hint">thumbnailPhoto</span></label>
+        <input type="text" id="thumbnailPhoto" placeholder="\\fileserver\photos\jdoe.jpg">
+      </div>
+      <div class="field">
+        <label>Certificate Store <span class="field-hint">userCertificate</span></label>
+        <input type="text" id="userCertificate" placeholder="Certificate thumbprint or path">
+      </div>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn btn-ghost" onclick="goTo(5)">← Address</button>
+      <button class="btn btn-primary" onclick="goTo(7); buildSummary()">Review →</button>
+    </div>
+  </div>
+
+  <!-- ══════════════ SECTION 8: REVIEW ══════════════ -->
+  <div class="form-section" id="section-7">
+    <div class="section-header">
+      <span class="section-num">08</span>
+      <span class="section-title">Review &amp; Confirm</span>
+      <span class="section-desc">Verify all attributes before export</span>
+    </div>
+    <div class="summary-grid" id="summaryGrid">
+      <p style="color:var(--text-dim);font-size:13px;">Loading summary…</p>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn btn-ghost" onclick="goTo(6)">← Groups &amp; Attrs</button>
+      <span></span>
     </div>
   </div>
 </div>
 
-<!-- CONTACT -->
-<div class="card">
-  <div class="card-head"><div class="dot" style="background:#BA7517"></div><h2>Contact information</h2></div>
-  <div class="card-body">
-    <div class="grid3">
-      <div class="f">
-        <label>Email address <span class="req-star">*</span></label>
-        <input type="email" id="email" placeholder="jane.smith@nrcan-rncan.gc.ca">
-        <span class="errmsg" id="e_email">Valid email is required</span>
-      </div>
-      <div class="f">
-        <label>Office phone</label>
-        <input type="tel" id="officePhone" placeholder="+1 (613) 555-0100">
-      </div>
-      <div class="f">
-        <label>Mobile / cell</label>
-        <input type="tel" id="mobile" placeholder="+1 (613) 555-0199">
-      </div>
-      <div class="f">
-        <label>Fax</label>
-        <input type="tel" id="fax" placeholder="+1 (613) 555-0101">
-      </div>
-      <div class="f">
-        <label>IP phone</label>
-        <input type="text" id="ipPhone" placeholder="e.g. 5000">
-      </div>
-      <div class="f">
-        <label>Web page</label>
-        <input type="url" id="webPage" placeholder="https://...">
-      </div>
-    </div>
-    <div class="grid2" style="margin-top:12px">
-      <div class="f"><label>Office / room</label><input type="text" id="office" placeholder="Room 412, 580 Booth St"></div>
-      <div class="f"><label>Street address</label><input type="text" id="streetAddress" placeholder="580 Booth Street"></div>
-      <div class="f"><label>City</label><input type="text" id="city" placeholder="Ottawa"></div>
-      <div class="f"><label>Province / State</label><input type="text" id="stateProvince" placeholder="Ontario"></div>
-      <div class="f"><label>Postal / ZIP code</label><input type="text" id="postalCode" placeholder="K1A 0E4"></div>
-      <div class="f">
-        <label>Country</label>
-        <select id="country"><option value="CA">Canada</option><option value="US">United States</option><option value="GB">United Kingdom</option><option value="OTHER">Other</option></select>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- REMOTE DESKTOP -->
-<div class="card">
-  <div class="card-head"><div class="dot" style="background:#639922"></div><h2>Remote desktop services</h2></div>
-  <div class="card-body">
-    <div class="grid2">
-      <div class="f"><label>TS profile path</label><input type="text" id="tsProfilePath" placeholder="\\server\tsprofiles\%username%"></div>
-      <div class="f"><label>TS home folder</label><input type="text" id="tsHomeFolder" placeholder="\\server\tshome\%username%"></div>
-    </div>
-    <div class="checks" style="margin-top:10px">
-      <div class="chk"><input type="checkbox" id="allowRDP" checked><label for="allowRDP">Allow remote desktop connection</label></div>
-      <div class="chk"><input type="checkbox" id="tsEndSession"><label for="tsEndSession">End a disconnected session</label></div>
-    </div>
-  </div>
-</div>
-
-<!-- SECURITY -->
-<div class="card">
-  <div class="card-head"><div class="dot" style="background:#A32D2D"></div><h2>Security &amp; AD SE settings</h2></div>
-  <div class="card-body">
-    <div class="grid2">
-      <div class="f">
-        <label>Privileged access tier</label>
-        <select id="tier">
-          <option value="">— standard user —</option>
-          <option value="T1">Tier 1 — Master owner / forest admin</option>
-          <option value="T2">Tier 2 — Domain operator / access management</option>
-          <option value="T3">Tier 3 — Location administrator</option>
-        </select>
-      </div>
-      <div class="f">
-        <label>Delegation model</label>
-        <select id="delegation">
-          <option value="none">None</option>
-          <option value="constrained">Constrained delegation (Kerberos)</option>
-          <option value="resource">Resource-based constrained delegation</option>
-        </select>
-      </div>
-      <div class="f">
-        <label>Kerberos encryption types</label>
-        <select id="encryptionType">
-          <option value="aes256">AES256 only (recommended — AD SE default)</option>
-          <option value="aes128_256">AES128 + AES256</option>
-          <option value="rc4_aes">RC4 + AES (legacy — not recommended)</option>
-        </select>
-      </div>
-      <div class="f">
-        <label>SPN (Service Principal Name)</label>
-        <input type="text" id="spn" placeholder="HTTP/host.nrn.nrcan.gc.ca">
-        <div class="hint">Leave blank for standard users</div>
-      </div>
-      <div class="f">
-        <label>Protected Users group</label>
-        <select id="protectedUsers">
-          <option value="no">No — standard</option>
-          <option value="yes">Yes — add to Protected Users</option>
-        </select>
-        <div class="hint">Disables NTLM, DES, RC4, unconstrained delegation</div>
-      </div>
-    </div>
-    <div class="checks" style="margin-top:12px">
-      <div class="chk"><input type="checkbox" id="sensitiveAccount"><label for="sensitiveAccount">Account is sensitive and cannot be delegated</label></div>
-      <div class="chk"><input type="checkbox" id="desEncryption"><label for="desEncryption">Use DES encryption (not recommended)</label></div>
-      <div class="chk"><input type="checkbox" id="noPreAuth"><label for="noPreAuth">Do not require Kerberos pre-authentication</label></div>
-      <div class="chk"><input type="checkbox" id="trustedForDelegation"><label for="trustedForDelegation">Trusted for delegation (unconstrained)</label></div>
-      <div class="chk"><input type="checkbox" id="mfaRequired" checked><label for="mfaRequired">MFA required for privileged access</label></div>
-      <div class="chk"><input type="checkbox" id="pawRequired"><label for="pawRequired">Require Privileged Access Workstation (PAW)</label></div>
-    </div>
-  </div>
-</div>
-
-<!-- GROUPS -->
-<div class="card">
-  <div class="card-head"><div class="dot" style="background:#7F77DD"></div><h2>Group membership</h2></div>
-  <div class="card-body">
-    <div class="grid2">
-      <div class="f">
-        <label>Primary group</label>
-        <input type="text" id="primaryGroup" value="Domain Users" readonly style="color:#888;background:#f8f8f8">
-      </div>
-      <div class="f">
-        <label>Additional security groups (comma-separated)</label>
-        <input type="text" id="memberOf" placeholder="SG-IT-Servers, RBAC-Location-Ottawa-Admins">
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ADDITIONAL -->
-<div class="card">
-  <div class="card-head"><div class="dot" style="background:#888"></div><h2>Additional attributes</h2></div>
-  <div class="card-body">
-    <div class="grid3">
-      <div class="f">
-        <label>Locale</label>
-        <select id="locale"><option value="en-CA">English (Canada)</option><option value="fr-CA">French (Canada)</option><option value="en-US">English (US)</option></select>
-      </div>
-      <div class="f"><label>Preferred language</label><input type="text" id="preferredLanguage" placeholder="e.g. en or fr"></div>
-      <div class="f">
-        <label>Time zone</label>
-        <select id="timezone">
-          <option>Eastern Time (ET)</option><option>Central Time (CT)</option>
-          <option>Mountain Time (MT)</option><option>Pacific Time (PT)</option>
-          <option>Atlantic Time (AT)</option><option>Newfoundland Time (NT)</option>
-        </select>
-      </div>
-      <div class="f"><label>altSecurityIdentities</label><input type="text" id="altSecId" placeholder="X509:certificate DN"></div>
-      <div class="f"><label>extensionAttribute1</label><input type="text" id="extAttr1" placeholder="Custom attribute"></div>
-      <div class="f"><label>extensionAttribute2</label><input type="text" id="extAttr2" placeholder="Custom attribute"></div>
-      <div class="f"><label>extensionAttribute3</label><input type="text" id="extAttr3" placeholder="Custom attribute"></div>
-    </div>
-    <div class="f" style="margin-top:12px">
-      <label>Notes / info</label>
-      <textarea id="notes" placeholder="Additional notes about this account..."></textarea>
-    </div>
-  </div>
-</div>
-
-<!-- VALIDATION SUMMARY -->
-<div class="val-box" id="valBox">
-  <p>Please complete the following required fields:</p>
-  <ul id="valList"></ul>
-</div>
-
-<!-- ACTIONS -->
+<!-- ══ Fixed Action Bar ══ -->
 <div class="action-bar">
-  <button class="btn btn-ghost" onclick="doReset()">Clear form</button>
-  <div style="flex:1"></div>
-  <button class="btn btn-blue" onclick="doSave()">&#128190; Save HTML</button>
-  <button class="btn btn-green" onclick="doPDF()">&#128196; Export PDF</button>
-  <button class="btn btn-purple" onclick="doJSON()">&#128203; Export JSON</button>
+  <div class="action-bar-left" id="actionStatus">Ready — fill in the form above</div>
+  <div class="action-bar-right">
+    <button class="btn btn-ghost" onclick="printForm()">🖨 Print</button>
+    <button class="btn btn-warn" onclick="saveJSON()">⬇ Save JSON</button>
+    <button class="btn btn-success" onclick="saveHTML()">⬇ Save HTML</button>
+  </div>
 </div>
 
-</div><!-- wrap -->
-
+<!-- Toast -->
 <div class="toast" id="toast"></div>
 
 <script>
-(function(){
+// ── Navigation ──
+let currentSection = 0;
+const totalSections = 8;
 
-// ── helpers ──────────────────────────────────────────────────────────────────
-function gv(id){
-  var el = document.getElementById(id);
-  if(!el) return '';
-  return (el.value || '').trim();
-}
-function cb(id){
-  var el = document.getElementById(id);
-  return el ? el.checked : false;
-}
-function showToast(msg, color){
-  var t = document.getElementById('toast');
-  t.textContent = msg;
-  t.style.background = color || '#222';
-  t.style.display = 'block';
-  setTimeout(function(){ t.style.display = 'none'; }, 3000);
-}
-
-// ── auto-fill UPN / SAM / display ────────────────────────────────────────────
-var manualUpn = false, manualSam = false, manualDisplay = false;
-function autoFill(){
-  var f = gv('firstName');
-  var l = gv('lastName');
-  var fl = f.toLowerCase().replace(/\s/g,'');
-  var ll = l.toLowerCase().replace(/\s/g,'');
-  if(!manualDisplay){
-    var dn = document.getElementById('displayName');
-    dn.value = (f + (f&&l?' ':'')+l);
-  }
-  if(!manualUpn){
-    var upn = document.getElementById('upnPrefix');
-    upn.value = fl && ll ? fl+'.'+ll : fl||ll;
-  }
-  if(!manualSam){
-    var sam = document.getElementById('samAccount');
-    sam.value = (fl ? fl[0] : '') + ll.substring(0, 19);
-  }
-  calcUAC();
-}
-document.getElementById('firstName').addEventListener('input', autoFill);
-document.getElementById('lastName').addEventListener('input', autoFill);
-document.getElementById('displayName').addEventListener('input', function(){ manualDisplay = true; });
-document.getElementById('upnPrefix').addEventListener('input', function(){ manualUpn = true; });
-document.getElementById('samAccount').addEventListener('input', function(){ manualSam = true; });
-
-// ── password strength ─────────────────────────────────────────────────────────
-document.getElementById('password').addEventListener('input', function(){
-  var pw = this.value;
-  var s = 0;
-  if(pw.length>=8) s++;
-  if(pw.length>=12) s++;
-  if(/[A-Z]/.test(pw)) s++;
-  if(/[0-9]/.test(pw)) s++;
-  if(/[^A-Za-z0-9]/.test(pw)) s++;
-  var colors = ['#ccc','#e74c3c','#e67e22','#f1c40f','#27ae60','#0F6E56'];
-  var labels = ['','Too short','Weak','Fair','Strong','Very strong'];
-  var widths  = ['0%','20%','40%','60%','80%','100%'];
-  document.getElementById('sbar').style.width = widths[s];
-  document.getElementById('sbar').style.background = colors[s];
-  document.getElementById('slbl').textContent = labels[s];
-  document.getElementById('slbl').style.color = colors[s];
-});
-
-// ── UAC ───────────────────────────────────────────────────────────────────────
-function calcUAC(){
-  var u = 512;
-  if(cb('accountDisabled'))    u += 2;
-  if(cb('pwNeverExpires'))     u += 65536;
-  if(cb('smartCardRequired'))  u += 262144;
-  if(cb('noPreAuth'))          u += 4194304;
-  if(cb('trustedForDelegation')) u += 524288;
-  if(cb('sensitiveAccount'))   u += 1048576;
-  document.getElementById('uac').value = u + ' (0x' + u.toString(16).toUpperCase() + ')';
-}
-document.querySelectorAll('input[type=checkbox]').forEach(function(el){
-  el.addEventListener('change', calcUAC);
-});
-
-// ── show/hide password ────────────────────────────────────────────────────────
-window.togglePw = function(id){
-  var el = document.getElementById(id);
-  el.type = el.type === 'password' ? 'text' : 'password';
-};
-
-// ── required fields ───────────────────────────────────────────────────────────
-var REQUIRED = [
-  { id:'firstName',   label:'First name' },
-  { id:'lastName',    label:'Last name' },
-  { id:'displayName', label:'Display name' },
-  { id:'upnPrefix',   label:'User logon name (UPN)' },
-  { id:'samAccount',  label:'sAMAccountName' },
-  { id:'jobTitle',    label:'Job title' },
-  { id:'department',  label:'Department' },
-  { id:'company',     label:'Company' },
-  { id:'ouPath',      label:'Organizational Unit (OU)' },
-  { id:'email',       label:'Email address' },
-];
-
-// live-clear errors
-REQUIRED.forEach(function(r){
-  var el = document.getElementById(r.id);
-  if(!el) return;
-  function tryClear(){
-    if((el.value||'').trim()){
-      el.classList.remove('invalid');
-      var em = document.getElementById('e_'+r.id);
-      if(em) em.classList.remove('show');
-    }
-  }
-  el.addEventListener('input',  tryClear);
-  el.addEventListener('change', tryClear);
-});
-
-function validate(){
-  var errors = [];
-  REQUIRED.forEach(function(r){
-    var el = document.getElementById(r.id);
-    var em = document.getElementById('e_'+r.id);
-    if(!el) return;
-    if(!(el.value||'').trim()){
-      el.classList.add('invalid');
-      if(em) em.classList.add('show');
-      errors.push(r.label);
-    } else {
-      el.classList.remove('invalid');
-      if(em) em.classList.remove('show');
-    }
+function goTo(idx) {
+  document.querySelectorAll('.form-section').forEach((s, i) => {
+    s.classList.toggle('active', i === idx);
   });
-  // password match
-  var pw = gv('password'), cpw = gv('confirmPw');
-  var cpe = document.getElementById('e_confirmPw');
-  if(pw && cpw && pw !== cpw){
-    document.getElementById('confirmPw').classList.add('invalid');
-    if(cpe) cpe.classList.add('show');
-    errors.push('Passwords do not match');
-  } else {
-    document.getElementById('confirmPw').classList.remove('invalid');
-    if(cpe) cpe.classList.remove('show');
-  }
-  var box  = document.getElementById('valBox');
-  var list = document.getElementById('valList');
-  if(errors.length){
-    list.innerHTML = errors.map(function(e){ return '<li>'+e+'</li>'; }).join('');
-    box.classList.add('show');
-    box.scrollIntoView({behavior:'smooth', block:'nearest'});
-    return false;
-  }
-  box.classList.remove('show');
-  return true;
+  document.querySelectorAll('.nav-tab').forEach((t, i) => {
+    t.classList.toggle('active', i === idx);
+  });
+  currentSection = idx;
+  document.getElementById('actionStatus').textContent =
+    `Section ${idx + 1} of ${totalSections} — ${document.querySelectorAll('.nav-tab')[idx].textContent}`;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ── collect data ──────────────────────────────────────────────────────────────
-function collect(){
-  return {
-    meta: {
-      createdAt: new Date().toISOString(),
-      domain: 'nrn.nrcan.gc.ca',
-      adVersion: 'Windows Server 2022 / AD SE'
-    },
-    identity: {
-      firstName:   gv('firstName'),
-      initials:    gv('initials'),
-      lastName:    gv('lastName'),
-      displayName: gv('displayName'),
-      fullName:    gv('fullName'),
-      description: gv('description')
-    },
-    account: {
-      upn:              gv('upnPrefix') + '@nrn.nrcan.gc.ca',
-      samAccountName:   'NRN\\' + gv('samAccount'),
-      passwordSet:      document.getElementById('password').value.length > 0,
-      accountExpires:   gv('acctExpires') === 'never' ? 'Never' : gv('expiryDate'),
-      logonHours:       gv('logonHours'),
-      logonWorkstations: gv('logonWorkstations') || 'All computers',
-      userAccountControl: document.getElementById('uac').value,
-      flags: {
-        mustChangePw:    cb('mustChangePw'),
-        cannotChangePw:  cb('cannotChangePw'),
-        pwNeverExpires:  cb('pwNeverExpires'),
-        accountDisabled: cb('accountDisabled'),
-        smartCardRequired: cb('smartCardRequired'),
-        accountLocked:   false
-      }
-    },
-    organisation: {
-      jobTitle:     gv('jobTitle'),
-      department:   gv('department'),
-      company:      gv('company'),
-      manager:      gv('manager'),
-      employeeId:   gv('employeeId'),
-      employeeType: gv('employeeType'),
-      division:     gv('division')
-    },
-    profile: {
-      ouPath:          gv('ouPath'),
-      profilePath:     gv('profilePath'),
-      logonScript:     gv('logonScript'),
-      homeFolderLocal: gv('homeFolderLocal'),
-      homeDrive:       gv('homeDrive'),
-      homeFolder:      gv('homeFolder')
-    },
-    contact: {
-      email:         gv('email'),
-      officePhone:   gv('officePhone'),
-      mobile:        gv('mobile'),
-      fax:           gv('fax'),
-      ipPhone:       gv('ipPhone'),
-      webPage:       gv('webPage'),
-      office:        gv('office'),
-      streetAddress: gv('streetAddress'),
-      city:          gv('city'),
-      stateProvince: gv('stateProvince'),
-      postalCode:    gv('postalCode'),
-      country:       gv('country')
-    },
-    remoteDesktop: {
-      tsProfilePath:        gv('tsProfilePath'),
-      tsHomeFolder:         gv('tsHomeFolder'),
-      allowRDP:             cb('allowRDP'),
-      endDisconnectedSession: cb('tsEndSession')
-    },
-    security: {
-      tier:           gv('tier') || 'Standard user',
-      delegation:     gv('delegation'),
-      encryptionType: gv('encryptionType'),
-      spn:            gv('spn'),
-      protectedUsers: gv('protectedUsers'),
-      flags: {
-        sensitiveAccount:    cb('sensitiveAccount'),
-        desEncryption:       cb('desEncryption'),
-        noPreAuth:           cb('noPreAuth'),
-        trustedForDelegation: cb('trustedForDelegation'),
-        mfaRequired:         cb('mfaRequired'),
-        pawRequired:         cb('pawRequired')
-      }
-    },
-    groups: {
-      primaryGroup: gv('primaryGroup'),
-      memberOf: gv('memberOf').split(',').map(function(s){ return s.trim(); }).filter(Boolean)
-    },
-    additional: {
-      locale:               gv('locale'),
-      preferredLanguage:    gv('preferredLanguage'),
-      timezone:             gv('timezone'),
-      altSecurityIdentities: gv('altSecId'),
-      extensionAttribute1:  gv('extAttr1'),
-      extensionAttribute2:  gv('extAttr2'),
-      extensionAttribute3:  gv('extAttr3'),
-      notes:                gv('notes')
-    }
+// ── Auto-generate names ──
+function autoGenerate() {
+  const fn = val('givenName'), mn = val('initials'), ln = val('sn');
+  if (fn || ln) {
+    setIfEmpty('displayName', [fn, ln].filter(Boolean).join(' '));
+    setIfEmpty('cn', [fn, mn ? mn + '.' : '', ln].filter(Boolean).join(' ').trim());
+  }
+}
+function setIfEmpty(id, v) {
+  const el = document.getElementById(id);
+  if (!el.dataset.userEdited) el.value = v;
+}
+['displayName','cn'].forEach(id => {
+  document.getElementById(id).addEventListener('input', function() {
+    this.dataset.userEdited = '1';
+  });
+});
+
+// ── Sync SAM → UPN ──
+function syncUPN() {
+  const sam = val('sAMAccountName');
+  const upn = document.getElementById('userPrincipalName');
+  if (!upn.dataset.userEdited && sam) {
+    upn.value = sam + '@corp.example.com';
+  }
+}
+document.getElementById('userPrincipalName').addEventListener('input', function() {
+  this.dataset.userEdited = '1';
+});
+
+// ── Password strength ──
+function checkPW() {
+  const pw = val('password');
+  const bars = [1,2,3,4].map(i => document.getElementById('pw'+i));
+  const label = document.getElementById('pwLabel');
+  bars.forEach(b => b.className = 'pw-bar');
+  let score = 0;
+  if (pw.length >= 8) score++;
+  if (/[A-Z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  const cls = score <= 1 ? 'weak' : score <= 2 ? 'medium' : 'strong';
+  const labels = ['','Weak','Fair','Strong','Very Strong'];
+  for (let i = 0; i < score; i++) bars[i].classList.add(cls);
+  label.textContent = pw.length === 0 ? 'Enter a password' : (labels[score] || 'Very Strong');
+}
+
+// ── Helpers ──
+function val(id) { return (document.getElementById(id)?.value || '').trim(); }
+function checked(id) { return document.getElementById(id)?.checked || false; }
+
+// ── Collect all data ──
+function collectData() {
+  const fields = [
+    'givenName','initials','sn','displayName','cn','generationQualifier','personalTitle',
+    'middleName','ou','employeeType','employeeID','employeeNumber','badgeID',
+    'sAMAccountName','userPrincipalName','accountExpires','logonHours','userWorkstations',
+    'pwdLastSet','resultantPSO',
+    'profilePath','scriptPath','homeDrive','homeDirectory','tsProfilePath','tsHomeDirectory',
+    'tsHomeDrive','tsInitialProgram',
+    'title','department','company','division','manager','assistant','costCenter','businessUnit',
+    'physicalDeliveryOfficeName','l',
+    'mail','proxyAddresses','telephoneNumber','mobile','homePhone','pager','ipPhone',
+    'facsimileTelephoneNumber','otherTelephone','otherMobile','wWWHomePage',
+    'streetAddress','postOfficeBox','city','st','postalCode','co',
+    'memberOf','primaryGroupID','mailNickname','homeMDB','msExchHomeServerName',
+    'extensionAttribute3','extensionAttribute4','extensionAttribute5',
+    'extensionAttribute6','extensionAttribute7','extensionAttribute8',
+    'description','info','userAccountControl','preferredLanguage','thumbnailPhoto','userCertificate'
+  ];
+  const boolFields = [
+    'mustChangePW','cannotChangePW','pwNeverExpires','accountDisabled',
+    'smartcardRequired','trustedForDelegation','dontRequirePreauth','sensitiveNoDelegate',
+    'tsAllowLogon','hideFromAddressList'
+  ];
+  const data = { _meta: { generatedAt: new Date().toISOString(), tool: 'AD User Provisioning Form' } };
+  fields.forEach(id => { const v = val(id); if (v) data[id] = v; });
+  boolFields.forEach(id => { data[id] = checked(id); });
+  return data;
+}
+
+// ── Summary builder ──
+function buildSummary() {
+  const data = collectData();
+  const grid = document.getElementById('summaryGrid');
+  const sections = {
+    'Identity': ['givenName','initials','sn','displayName','cn','employeeType','employeeID','ou'],
+    'Account': ['sAMAccountName','userPrincipalName','accountExpires','logonHours','mustChangePW','pwNeverExpires','accountDisabled'],
+    'Profile': ['profilePath','scriptPath','homeDrive','homeDirectory'],
+    'Organization': ['title','department','company','manager','physicalDeliveryOfficeName'],
+    'Contact': ['mail','telephoneNumber','mobile'],
+    'Address': ['streetAddress','city','st','postalCode','co'],
+    'Groups': ['memberOf','mailNickname','description'],
   };
+  let html = '';
+  for (const [sec, keys] of Object.entries(sections)) {
+    const items = keys.map(k => {
+      const v = data[k] === true ? '✓ Yes' : data[k] === false ? '✗ No' : (data[k] || '');
+      return v ? `<div class="summary-item"><div class="summary-key">${k}</div><div class="summary-val">${escHtml(v)}</div></div>` : '';
+    }).filter(Boolean).join('');
+    if (items) html += `<div class="summary-section-title">${sec}</div>${items}`;
+  }
+  grid.innerHTML = html || '<p style="color:var(--text-dim);font-size:13px;">No data entered yet.</p>';
 }
 
-// ── download helper ───────────────────────────────────────────────────────────
-function download(content, filename, mime){
-  var blob = (content instanceof Blob) ? content : new Blob([content], {type: mime});
-  var url  = URL.createObjectURL(blob);
-  var a    = document.createElement('a');
-  a.href     = url;
-  a.download = filename;
-  document.body.appendChild(a);
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Print ──
+function printForm() {
+  showToast('Sending to printer…', 'success');
+  setTimeout(() => window.print(), 300);
+}
+
+// ── Save JSON ──
+function saveJSON() {
+  const data = collectData();
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  download(blob, `ad-user-${(data.sAMAccountName || 'new')}.json`);
+  showToast('JSON saved successfully', 'success');
+}
+
+// ── Save HTML ──
+function saveHTML() {
+  const data = collectData();
+  const rows = Object.entries(data)
+    .filter(([k]) => k !== '_meta')
+    .map(([k,v]) => `<tr><td class="attr">${escHtml(k)}</td><td>${escHtml(String(v))}</td></tr>`)
+    .join('\n');
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AD User: ${escHtml(data.displayName || data.sAMAccountName || 'New User')}</title>
+<style>
+  body{font-family:'Segoe UI',Arial,sans-serif;max-width:800px;margin:40px auto;color:#1e293b;background:#f8fafc;padding:24px}
+  h1{font-size:22px;margin-bottom:4px;color:#0f172a}
+  .meta{font-size:12px;color:#64748b;margin-bottom:28px}
+  table{width:100%;border-collapse:collapse;background:white;box-shadow:0 1px 4px rgba(0,0,0,.08);border-radius:8px;overflow:hidden}
+  th{background:#1e40af;color:white;text-align:left;padding:10px 16px;font-size:12px;letter-spacing:.05em;text-transform:uppercase}
+  td{padding:9px 16px;font-size:13px;border-bottom:1px solid #e2e8f0}
+  td.attr{font-family:monospace;font-size:12px;color:#475569;width:42%;font-weight:500}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:#f1f5f9}
+  h2{margin:28px 0 8px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#3b82f6}
+</style>
+</head>
+<body>
+<h1>AD User Provisioning Record</h1>
+<div class="meta">Generated: ${new Date().toLocaleString()} &nbsp;|&nbsp; Tool: AD User Provisioning Form</div>
+<table>
+<thead><tr><th>Attribute</th><th>Value</th></tr></thead>
+<tbody>
+${rows}
+</tbody>
+</table>
+</body></html>`;
+
+  const blob = new Blob([html], { type: 'text/html' });
+  download(blob, `ad-user-${(data.sAMAccountName || 'new')}.html`);
+  showToast('HTML report saved successfully', 'success');
+}
+
+function download(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
   a.click();
-  setTimeout(function(){
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, 500);
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 }
 
-function baseName(){
-  var sam = gv('samAccount') || 'new';
-  var dt  = new Date().toISOString().slice(0,10);
-  return 'AD_User_' + sam + '_' + dt;
+// ── Toast ──
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = (type === 'success' ? '✓ ' : '✗ ') + msg;
+  t.className = 'toast ' + type;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
 }
-
-// ── EXPORT JSON ───────────────────────────────────────────────────────────────
-window.doJSON = function(){
-  validate(); // show warnings but don't block
-  var d = collect();
-  var str = JSON.stringify(d, null, 2);
-  download(str, baseName() + '.json', 'application/json');
-  showToast('JSON file saved to downloads', '#534AB7');
-};
-
-// ── SAVE HTML ─────────────────────────────────────────────────────────────────
-window.doSave = function(){
-  var d = collect();
-  function rows(pairs){
-    return pairs.map(function(p){
-      var v = p[1];
-      if(v === '' || v === null || v === undefined) return '';
-      if(typeof v === 'boolean') v = v ? 'Yes' : 'No';
-      return '<tr><td>'+p[0]+'</td><td>'+v+'</td></tr>';
-    }).join('');
-  }
-  function sec(title, pairs){
-    var r = rows(pairs);
-    if(!r) return '';
-    return '<h2>'+title+'</h2><table>'+r+'</table>';
-  }
-  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>AD User – '+d.identity.displayName+'</title>'
-    +'<style>body{font-family:system-ui,sans-serif;max-width:820px;margin:2rem auto;padding:0 1rem;color:#1a1a1a}'
-    +'h1{font-size:18px;color:#185FA5;margin-bottom:2px}p.sub{font-size:11px;color:#888;margin-bottom:1.5rem}'
-    +'h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#185FA5;'
-    +'margin:1.4rem 0 .4rem;border-bottom:2px solid #e0e0e0;padding-bottom:3px}'
-    +'table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:.5rem}'
-    +'td{padding:5px 8px;border-bottom:1px solid #f0f0f0;vertical-align:top}'
-    +'td:first-child{color:#555;width:38%;font-weight:600}'
-    +'td:last-child{color:#1a1a1a}'
-    +'footer{margin-top:2rem;font-size:10px;color:#aaa;border-top:1px solid #eee;padding-top:8px}'
-    +'</style></head><body>'
-    +'<h1>Active Directory SE — User Record</h1>'
-    +'<p class="sub">nrn.nrcan.gc.ca &nbsp;·&nbsp; Saved: '+new Date().toLocaleString()+'</p>';
-
-  html += sec('Identity',[
-    ['First name',d.identity.firstName],['Initials',d.identity.initials],
-    ['Last name',d.identity.lastName],['Display name',d.identity.displayName],
-    ['Full name (CN)',d.identity.fullName],['Description',d.identity.description]
-  ]);
-  html += sec('Account',[
-    ['UPN',d.account.upn],['sAMAccountName',d.account.samAccountName],
-    ['Password',d.account.passwordSet?'[set — not stored]':'[not set]'],
-    ['Account expires',d.account.accountExpires],['Logon hours',d.account.logonHours],
-    ['Logon workstations',d.account.logonWorkstations],
-    ['userAccountControl',d.account.userAccountControl],
-    ['Must change password',d.account.flags.mustChangePw],
-    ['Cannot change password',d.account.flags.cannotChangePw],
-    ['Password never expires',d.account.flags.pwNeverExpires],
-    ['Account disabled',d.account.flags.accountDisabled],
-    ['Smart card required',d.account.flags.smartCardRequired]
-  ]);
-  html += sec('Organisation',[
-    ['Job title',d.organisation.jobTitle],['Department',d.organisation.department],
-    ['Company',d.organisation.company],['Manager',d.organisation.manager],
-    ['Employee ID',d.organisation.employeeId],['Employee type',d.organisation.employeeType],
-    ['Division',d.organisation.division]
-  ]);
-  html += sec('Profile & OU',[
-    ['OU path',d.profile.ouPath],['Profile path',d.profile.profilePath],
-    ['Logon script',d.profile.logonScript],['Home folder (local)',d.profile.homeFolderLocal],
-    ['Home drive',d.profile.homeDrive],['Home folder (UNC)',d.profile.homeFolder]
-  ]);
-  html += sec('Contact',[
-    ['Email',d.contact.email],['Office phone',d.contact.officePhone],
-    ['Mobile',d.contact.mobile],['Fax',d.contact.fax],
-    ['IP phone',d.contact.ipPhone],['Web page',d.contact.webPage],
-    ['Office / room',d.contact.office],['Street address',d.contact.streetAddress],
-    ['City',d.contact.city],['Province / State',d.contact.stateProvince],
-    ['Postal code',d.contact.postalCode],['Country',d.contact.country]
-  ]);
-  html += sec('Remote Desktop',[
-    ['TS profile path',d.remoteDesktop.tsProfilePath],
-    ['TS home folder',d.remoteDesktop.tsHomeFolder],
-    ['Allow RDP',d.remoteDesktop.allowRDP],
-    ['End disconnected session',d.remoteDesktop.endDisconnectedSession]
-  ]);
-  html += sec('Security & AD SE',[
-    ['Tier',d.security.tier],['Delegation',d.security.delegation],
-    ['Kerberos encryption',d.security.encryptionType],
-    ['SPN',d.security.spn],['Protected Users',d.security.protectedUsers],
-    ['Account sensitive',d.security.flags.sensitiveAccount],
-    ['Use DES encryption',d.security.flags.desEncryption],
-    ['No Kerberos pre-auth',d.security.flags.noPreAuth],
-    ['Trusted for delegation',d.security.flags.trustedForDelegation],
-    ['MFA required',d.security.flags.mfaRequired],
-    ['PAW required',d.security.flags.pawRequired]
-  ]);
-  html += sec('Groups',[
-    ['Primary group',d.groups.primaryGroup],
-    ['Member of',d.groups.memberOf.join(', ')||'None']
-  ]);
-  html += sec('Additional',[
-    ['Locale',d.additional.locale],['Preferred language',d.additional.preferredLanguage],
-    ['Time zone',d.additional.timezone],
-    ['altSecurityIdentities',d.additional.altSecurityIdentities],
-    ['extensionAttribute1',d.additional.extensionAttribute1],
-    ['extensionAttribute2',d.additional.extensionAttribute2],
-    ['extensionAttribute3',d.additional.extensionAttribute3],
-    ['Notes',d.additional.notes]
-  ]);
-  html += '<footer>NRCan Active Directory SE — Confidential &nbsp;·&nbsp; '+new Date().toLocaleString()+'</footer></body></html>';
-
-  download(html, baseName()+'.html', 'text/html');
-  showToast('HTML file saved to downloads', '#185FA5');
-};
-
-// ── EXPORT PDF ────────────────────────────────────────────────────────────────
-window.doPDF = function(){
-  validate(); // show warnings but don't block
-  if(!window.jspdf || !window.jspdf.jsPDF){
-    showToast('PDF library not ready — please wait a moment and try again', '#c0392b');
-    return;
-  }
-  var d = collect();
-  var doc = new window.jspdf.jsPDF({ orientation:'portrait', unit:'pt', format:'a4' });
-  var PW = doc.internal.pageSize.getWidth();
-  var PH = doc.internal.pageSize.getHeight();
-  var ML = 40, CW = PW - ML*2;
-  var y = 0;
-
-  // header
-  doc.setFillColor(24,95,165);
-  doc.rect(0,0,PW,56,'F');
-  doc.setTextColor(255,255,255);
-  doc.setFontSize(16); doc.setFont('helvetica','bold');
-  doc.text('Active Directory SE — New User Record', ML, 28);
-  doc.setFontSize(9); doc.setFont('helvetica','normal');
-  doc.text('nrn.nrcan.gc.ca  ·  Generated: ' + new Date().toLocaleString(), ML, 46);
-  y = 72;
-
-  function chkPage(need){
-    if(y + need > PH - 36){ doc.addPage(); y = 36; }
-  }
-  function sectionHead(title, rgb){
-    chkPage(22);
-    doc.setFillColor(rgb[0],rgb[1],rgb[2]);
-    doc.rect(ML, y, CW, 20, 'F');
-    doc.setTextColor(255,255,255);
-    doc.setFontSize(9); doc.setFont('helvetica','bold');
-    doc.text(title, ML+6, y+14);
-    y += 24;
-  }
-  function row(label, val){
-    if(val === '' || val === null || val === undefined) return;
-    var sval = String(val);
-    chkPage(16);
-    doc.setTextColor(80,80,80); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
-    doc.text(label, ML+4, y);
-    doc.setTextColor(26,26,26); doc.setFont('helvetica','normal');
-    var wrapped = doc.splitTextToSize(sval, CW - 136);
-    doc.text(wrapped, ML+136, y);
-    y += Math.max(14, wrapped.length * 12);
-    doc.setDrawColor(220,220,220); doc.setLineWidth(0.3);
-    doc.line(ML, y-1, ML+CW, y-1);
-  }
-  function brow(label, val){ row(label, val ? 'Yes' : 'No'); }
-
-  sectionHead('Identity', [24,95,165]);
-  row('First name', d.identity.firstName); row('Initials', d.identity.initials);
-  row('Last name', d.identity.lastName); row('Display name', d.identity.displayName);
-  row('Full name (CN)', d.identity.fullName); row('Description', d.identity.description);
-  y += 4;
-
-  sectionHead('Account', [15,110,86]);
-  row('UPN', d.account.upn); row('sAMAccountName', d.account.samAccountName);
-  row('Password', d.account.passwordSet ? '[set — not stored]' : '[not set]');
-  row('Account expires', d.account.accountExpires);
-  row('Logon hours', d.account.logonHours);
-  row('Logon workstations', d.account.logonWorkstations);
-  row('userAccountControl', d.account.userAccountControl);
-  brow('Must change password at next logon', d.account.flags.mustChangePw);
-  brow('Cannot change password', d.account.flags.cannotChangePw);
-  brow('Password never expires', d.account.flags.pwNeverExpires);
-  brow('Account disabled', d.account.flags.accountDisabled);
-  brow('Smart card required', d.account.flags.smartCardRequired);
-  y += 4;
-
-  sectionHead('Organisation', [83,74,183]);
-  row('Job title', d.organisation.jobTitle); row('Department', d.organisation.department);
-  row('Company', d.organisation.company); row('Manager', d.organisation.manager);
-  row('Employee ID', d.organisation.employeeId); row('Employee type', d.organisation.employeeType);
-  row('Division', d.organisation.division);
-  y += 4;
-
-  sectionHead('Profile & OU placement', [153,60,29]);
-  row('OU path', d.profile.ouPath); row('Profile path', d.profile.profilePath);
-  row('Logon script', d.profile.logonScript); row('Home folder (local)', d.profile.homeFolderLocal);
-  row('Home drive', d.profile.homeDrive); row('Home folder (UNC)', d.profile.homeFolder);
-  y += 4;
-
-  sectionHead('Contact information', [186,117,23]);
-  row('Email', d.contact.email); row('Office phone', d.contact.officePhone);
-  row('Mobile', d.contact.mobile); row('Fax', d.contact.fax);
-  row('IP phone', d.contact.ipPhone); row('Web page', d.contact.webPage);
-  row('Office / room', d.contact.office); row('Street address', d.contact.streetAddress);
-  row('City', d.contact.city); row('Province / State', d.contact.stateProvince);
-  row('Postal code', d.contact.postalCode); row('Country', d.contact.country);
-  y += 4;
-
-  sectionHead('Remote desktop services', [99,153,34]);
-  row('TS profile path', d.remoteDesktop.tsProfilePath);
-  row('TS home folder', d.remoteDesktop.tsHomeFolder);
-  brow('Allow RDP', d.remoteDesktop.allowRDP);
-  brow('End disconnected session', d.remoteDesktop.endDisconnectedSession);
-  y += 4;
-
-  sectionHead('Security & AD SE settings', [163,45,45]);
-  row('Privileged access tier', d.security.tier);
-  row('Delegation model', d.security.delegation);
-  row('Kerberos encryption', d.security.encryptionType);
-  row('SPN', d.security.spn);
-  row('Protected Users', d.security.protectedUsers);
-  brow('Account sensitive / cannot be delegated', d.security.flags.sensitiveAccount);
-  brow('Use DES encryption', d.security.flags.desEncryption);
-  brow('No Kerberos pre-auth', d.security.flags.noPreAuth);
-  brow('Trusted for delegation (unconstrained)', d.security.flags.trustedForDelegation);
-  brow('MFA required', d.security.flags.mfaRequired);
-  brow('PAW required', d.security.flags.pawRequired);
-  y += 4;
-
-  sectionHead('Group membership', [127,119,221]);
-  row('Primary group', d.groups.primaryGroup);
-  row('Member of', d.groups.memberOf.join(', ') || 'None');
-  y += 4;
-
-  sectionHead('Additional attributes', [136,135,128]);
-  row('Locale', d.additional.locale);
-  row('Preferred language', d.additional.preferredLanguage);
-  row('Time zone', d.additional.timezone);
-  row('altSecurityIdentities', d.additional.altSecurityIdentities);
-  row('extensionAttribute1', d.additional.extensionAttribute1);
-  row('extensionAttribute2', d.additional.extensionAttribute2);
-  row('extensionAttribute3', d.additional.extensionAttribute3);
-  row('Notes', d.additional.notes);
-
-  // page footers
-  var pages = doc.internal.getNumberOfPages();
-  for(var i = 1; i <= pages; i++){
-    doc.setPage(i);
-    doc.setFontSize(8); doc.setTextColor(180,180,180);
-    doc.text('NRCan Active Directory SE — Confidential', ML, PH-16);
-    doc.text('Page ' + i + ' of ' + pages, PW-ML, PH-16, {align:'right'});
-  }
-
-  var blob = doc.output('blob');
-  download(blob, baseName()+'.pdf', 'application/pdf');
-  showToast('PDF file saved to downloads', '#0F6E56');
-};
-
-// ── RESET ─────────────────────────────────────────────────────────────────────
-window.doReset = function(){
-  document.querySelectorAll('input:not([type=checkbox]):not([type=file]), select, textarea').forEach(function(el){
-    if(el.id === 'company')      el.value = 'Natural Resources Canada';
-    else if(el.id === 'primaryGroup') el.value = 'Domain Users';
-    else if(el.readOnly)         return;
-    else                         el.value = '';
-  });
-  document.querySelectorAll('input[type=checkbox]').forEach(function(cb){
-    cb.checked = ['mustChangePw','allowRDP','mfaRequired'].indexOf(cb.id) !== -1;
-  });
-  document.querySelectorAll('.invalid').forEach(function(el){ el.classList.remove('invalid'); });
-  document.querySelectorAll('.errmsg.show').forEach(function(el){ el.classList.remove('show'); });
-  document.getElementById('valBox').classList.remove('show');
-  document.getElementById('expiryWrap').style.display = 'none';
-  document.getElementById('sbar').style.width = '0';
-  document.getElementById('slbl').textContent = '';
-  manualUpn = false; manualSam = false; manualDisplay = false;
-  calcUAC();
-  showToast('Form cleared', '#444');
-};
-
-// init
-calcUAC();
-
-})();
 </script>
 </body>
 </html>
